@@ -16,7 +16,7 @@ enum ERRNO
 
 message PingRequest 
 {
-    string host = 1;
+    uint32 port = 1;
 }
 
 message PingReply 
