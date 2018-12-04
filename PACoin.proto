@@ -1,0 +1,102 @@
+syntax = "proto3";
+
+package PACoin;
+
+service P2PDiscovery
+{
+    rpc ping (PingRequest) returns (PingReply) {}
+    rpc pullPeers (PullPeersRequest) returns (PullPeersReply) {}
+}
+
+enum ERRNO 
+{
+    SUCCESS = 0;
+    ERROR = 1;
+}
+
+message PingRequest 
+{
+    string host = 1;
+}
+
+message PingReply 
+{
+    ERRNO ret = 1;
+}
+
+
+message PullPeersRequest 
+{
+    uint64 num = 1;
+}
+
+message PullPeersReply 
+{
+    ERRNO ret = 1;
+    repeated string hosts = 2;
+}
+
+service TransactionTransfer
+{
+    rpc sendTxns (SendTxnsRequest) returns (SendTxnsReply) {}
+}
+
+message Transaction
+{
+    string data = 1;
+}
+
+message SendTxnsRequest
+{
+    repeated Transaction txns = 1;
+}
+
+message SendTxnsReply
+{
+    ERRNO ret = 1;
+}
+
+service BlockTransfer
+{
+    rpc sendBlocks (SendBlocksRequest) returns (SendBlocksReply) {}
+    rpc pullBlocks (PullBlocksRequest) returns (PullBlocksReply) {}
+    rpc syncStatus (SyncStatusRequest) returns (SyncStatusReply) {}
+}
+
+message Block
+{
+    string data = 1;
+}
+
+message SendBlocksRequest
+{
+    repeated Block blocks = 1;
+}
+
+message SendBlocksReply
+{
+    ERRNO ret = 1;
+}
+
+message PullBlocksRequest
+{
+    uint64 base = 1;
+    uint64 num = 2;
+}
+
+message PullBlocksReply
+{
+    ERRNO ret = 1;
+    repeated Block blocks = 2;
+}
+
+message SyncStatusRequest
+{
+    uint64 curr = 1;
+}
+
+message SyncStatusReply
+{
+    ERRNO ret = 1;
+    uint64 curr = 2;
+}
