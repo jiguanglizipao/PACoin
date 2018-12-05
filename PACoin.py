@@ -79,25 +79,26 @@ class PACoin:
         cursor.close()
         self.db_mutex.release()
 
-    def list_peers(self, num=65536):
+    def list_peers(self, num=-1):
         self.db_mutex.acquire()
         cursor = self.db.cursor()
-        cursor.execute(
-            "SELECT host FROM peers ORDER BY latency ASC LIMIT ?", (num, ))
+        if num >= 0:
+            cursor.execute(
+                "SELECT host FROM peers ORDER BY random() ASC LIMIT ?", (num, ))
+        else:
+            cursor.execute(
+                "SELECT host FROM peers ORDER BY random() ASC")
 #        print(cursor.fetchone())
         arr = [r[0] for r in cursor.fetchall()]
         cursor.close()
         self.db_mutex.release()
         return arr
 
-    def shrink_peers(self, num, if_print=False):
+    def delete_peer(self, peer):
         self.db_mutex.acquire()
         cursor = self.db.cursor()
         cursor.execute(
-            "DELETE FROM peers WHERE host NOT IN (SELECT host FROM peers ORDER BY latency ASC LIMIT ?)", (num, ))
-        if if_print:
-            cursor.execute("SELECT * FROM peers ORDER BY latency ASC")
-            print("current peers: ", cursor.fetchall())
+            "DELETE FROM peers WHERE host = ?", (peer, ))
         cursor.close()
         self.db_mutex.release()
 
@@ -119,6 +120,7 @@ class PACoin:
 #                      (latency.real * 1e3))
                 self.update_latency(peer, 1000 * latency)
         except Exception as e:
+            self.delete_peer(peer)
             print(e)
 
     def pullPeers(self, peer):
@@ -131,15 +133,20 @@ class PACoin:
                 for host in response.hosts:
                     self.init_latency(host)
         except Exception as e:
+            self.delete_peer(peer)
             print(e)
 
     def update_peers(self):
-        self.shrink_peers(self.peer_num)
-        for p in self.list_peers(self.peer_num):
-            self.pullPeers(p)
-        for p in self.list_peers(self.peer_num * (self.peer_num + 1)):
+        peers = self.list_peers(self.peer_num)
+        for p in peers:
             self.ping(p)
-        self.shrink_peers(self.peer_num, True)
+            self.pullPeers(p)
+
+        if len(self.list_peers(self.peer_num)) == 0:
+            for peer in self.peers:
+                self.update_latency(peer, 0.0)
+
+        print("Peers list size: ", len(self.list_peers()))
 
     def loop(self, seconds, func, *args):
         func(*args)
@@ -174,7 +181,7 @@ if __name__ == '__main__':
     parser.add_argument('--timeout', type=float,
                         default=2000.0, help='Threshold for timeout')
     parser.add_argument('--peer_num', type=int, default=5,
-                        help='Maximum numbers of peers')
+                        help='Maximum numbers of peers to send data')
     args = parser.parse_args()
     logging.basicConfig()
 
