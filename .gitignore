@@ -105,3 +105,4 @@ venv.bak/
 
 # PACoin db
 *.db
+*.db-journal
