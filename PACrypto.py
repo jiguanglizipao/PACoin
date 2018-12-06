@@ -76,11 +76,12 @@ def verify_sign(data, sign, pubkey_hex):
     except Exception as e:
         return False
 
-# def generate_hash(data):
-#    hash_engine = cryptography.hazmat.primitives.hashes.Hash(cryptography.hazmat.primitives.hashes.SHA512(), cryptography.hazmat.backends.default_backend())
-#    hash_engine.update(data)
-# return '{:x}'.format(int.from_bytes(hash_engine.finalize(),
-# byteorder='big'))
+
+def generate_hash(data):
+    hash_engine = cryptography.hazmat.primitives.hashes.Hash(
+        cryptography.hazmat.primitives.hashes.SHA512(), cryptography.hazmat.backends.default_backend())
+    hash_engine.update(data)
+    return '{:x}'.format(int.from_bytes(hash_engine.finalize(), byteorder='big'))
 
 
 # pkey = cryptography.hazmat.primitives.asymmetric.ec.derive_private_key(int(pkey_hex, base=16), cryptography.hazmat.primitives.asymmetric.ec.SECP256K1(), cryptography.hazmat.backends.default_backend())
