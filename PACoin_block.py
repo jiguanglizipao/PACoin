@@ -8,7 +8,9 @@ import PACrypto as crypto
 pickle_protocol = 2
 
 def PACoin_hash(data):
-    return crypto.generate_hash(pickle.dumps(data, protocol=2))
+    if isinstance(data, bytes):
+        return crypto.generate_hash(data)
+    return crypto.generate_hash(pickle.dumps(data, protocol=pickle_protocol))
 
 class MerkelTree:
 
