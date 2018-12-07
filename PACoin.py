@@ -163,14 +163,14 @@ class PACoin:
 
     def update_block_header(self):
         note = "should be atomic......"
-        transaction_list = mysqlite.get_unverified_transactions(self.db)
+        transaction_list = mysqlite.get_unverified_transactions(self.db, self.db_mutex)
         transaction_list.sort(key=lambda t: -(t[1].transaction.tip))
         transaction_list = transaction_list[:self.max_transaction_num]
         transaction_list.sort(key=lambda t: t[1].transaction.timestamp)
 
         # TODO: verify those transactions
         # TODO: fetch parent hash from sqlite
-        last_block_hash = mysqlite.get_last_block_hash(self.db)
+        last_block_hash = mysqlite.get_last_block_hash(self.db, self.db_mutex)
         index = 0
         self.block_on_trying = PACoin_block.Block(self.version, last_block_hash, transaction_list,  time.time(), index)
 
@@ -187,12 +187,12 @@ class PACoin:
     def test_db(self):
         # for i in range(6):
         #     t = utils.generate_random_transaction()
-        #     mysqlite.write_transaction(self.db, 1, t)
+        #     mysqlite.write_transaction(self.db, self.db_mutex, 1, t)
         # for i in range(4):
         #     t = utils.generate_random_transaction()
-        #     mysqlite.write_transaction(self.db, 0, t)
+        #     mysqlite.write_transaction(self.db, self.db_mutex, 0, t)
         #
-        # transaction_list = mysqlite.get_unverified_transactions(self.db)
+        # transaction_list = mysqlite.get_unverified_transactions(self.db, self.db_mutex)
         # transaction_list.sort(key=lambda t: -(t[1].transaction.tip))
         # transaction_list = transaction_list[:self.max_transaction_num]
         # transaction_list.sort(key=lambda t: t[1].transaction.timestamp)
@@ -201,7 +201,7 @@ class PACoin:
         # for t in transaction_list:
         #     flag_list.append(1)
         #     id_list.append(t[0])
-        # mysqlite.update_transaction(self.db, id_list, flag_list)
+        # mysqlite.update_transaction(self.db, self.db_mutex, id_list, flag_list)
         pass
 
 
