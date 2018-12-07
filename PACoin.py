@@ -11,6 +11,7 @@ import sqlite3
 import grpc
 import PACoin_pb2
 import PACoin_pb2_grpc
+import PACoin_block
 
 
 class PACoin:
@@ -46,6 +47,9 @@ class PACoin:
         self.timeout = timeout
         self.peer_num = peer_num
         atexit.register(self.cleanup)
+
+        # ******* mining logic *******
+        self.version = 0
 
     def cleanup(self):
         self.db.commit()
@@ -147,6 +151,27 @@ class PACoin:
                 self.update_latency(peer, 0.0)
 
         print("Peers list size: ", len(self.list_peers()))
+
+# *********************** mining logic *************************
+
+    def update_block_header(self):
+        # TODO: get all uncommited transactions from sqlite
+        # TODO: select those with high tips
+        transaction_list = []
+        # TODO: fetch from sqlite
+        last_block_hash = PACoin_hash('a')
+        index = 0
+        self.block_on_trying = block = Block(self.version, parent_hash, transaction_list, time.time(), index)
+
+    def mine():
+        n = int(random.random() * pow(2, 64))
+        self.block_on_trying.set_pow_n(n)
+        h = PACoin_hash(self.block_on_trying.serialized())
+        if h < threshold:
+            return block
+        return None
+
+# *********************** end of mining logic *************************
 
     def loop(self, seconds, func, *args):
         func(*args)

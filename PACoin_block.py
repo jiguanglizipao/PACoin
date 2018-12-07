@@ -2,6 +2,7 @@
 
 import time
 import pickle
+import random
 import PACrypto as crypto
 
 # pickle protocol is forced to be 2
@@ -70,19 +71,49 @@ class MerkelTree:
             print(i, node.depth, node.value)
             i += 1
 
-
 class Block:
 
-    def __init__(self, version, parent_hash, merkle_tree, timestamp, index, pow_n):
+    def __init__(self, version, parent_hash, transaction_list, timestamp, index):
         self.version = version
         self.parent_hash = parent_hash
-        self.merkle_tree = merkle_tree.serialized()
+        self.transaction_list = transaction_list
         self.timestamp = timestamp
         self.index = index
+
+        merkle_tree = MerkelTree(self.transaction_list)
+        self.merkle_root = merkle_tree.root
+
+    def set_pow_n(pow_n):
         self.pow_n = pow_n
 
     def serialized(self):
         return pickle.dumps(self, protocol=pickle_protocol)
+
+def select_transactions(transactions):
+    # TODO: select those with high tips
+    # TODO: limited number
+    return transactions
+
+def get_last_block_hash():
+    # TODO: fetch from sqlite
+    return PACoin_hash('a')
+
+def mine(version, all_transactions, index, threshold, n_try):
+    transaction_list = select(all_transactions)
+    parent_hash = get_last_block_hash()
+    block = Block(version, parent_hash, transaction_list, time.time(), index)
+    
+    for i in range(n):
+        n = int(random.random() * pow(2, 64))
+        block.set_pow_n(n)
+        h = PACoin_hash(block.serialized())
+        if h < threshold:
+            return block
+
+    return None
+
+
+
 
 # if __name__ == '__main__':
 
