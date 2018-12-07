@@ -7,11 +7,16 @@ import signal
 import atexit
 import argparse
 import sqlite3
+import random
 
 import grpc
 import PACoin_pb2
 import PACoin_pb2_grpc
 import PACoin_block
+import PACrypto
+import pickle
+import Sqlite_utils as mysqlite
+import PACoin_utils as utils
 
 
 class PACoin:
@@ -50,6 +55,8 @@ class PACoin:
 
         # ******* mining logic *******
         self.version = 0
+        self.max_transaction_num = 10
+        self.threshold = 0.9
 
     def cleanup(self):
         self.db.commit()
@@ -155,21 +162,50 @@ class PACoin:
 # *********************** mining logic *************************
 
     def update_block_header(self):
-        # TODO: get all uncommited transactions from sqlite
-        # TODO: select those with high tips
-        transaction_list = []
-        # TODO: fetch from sqlite
-        last_block_hash = PACoin_hash('a')
-        index = 0
-        self.block_on_trying = block = Block(self.version, parent_hash, transaction_list, time.time(), index)
+        note = "should be atomic......"
+        transaction_list = mysqlite.get_unverified_transactions(self.db)
+        transaction_list.sort(key=lambda t: -(t[1].transaction.tip))
+        transaction_list = transaction_list[:self.max_transaction_num]
+        transaction_list.sort(key=lambda t: t[1].transaction.timestamp)
 
-    def mine():
+        # TODO: verify those transactions
+        # TODO: fetch parent hash from sqlite
+        last_block_hash = mysqlite.get_last_block_hash(self.db)
+        index = 0
+        self.block_on_trying = PACoin_block.Block(self.version, last_block_hash, transaction_list,  time.time(), index)
+
+    def mine(self, threshold):
+        # TODO: need to be modified
         n = int(random.random() * pow(2, 64))
         self.block_on_trying.set_pow_n(n)
-        h = PACoin_hash(self.block_on_trying.serialized())
-        if h < threshold:
-            return block
+        h = utils.PACoin_hash(self.block_on_trying.serialized())
+        if utils.validate_hash(h, threshold):
+            # success!
+            pass
         return None
+    
+    def test_db(self):
+        # for i in range(6):
+        #     t = utils.generate_random_transaction()
+        #     mysqlite.write_transaction(self.db, 1, t)
+        # for i in range(4):
+        #     t = utils.generate_random_transaction()
+        #     mysqlite.write_transaction(self.db, 0, t)
+        #
+        # transaction_list = mysqlite.get_unverified_transactions(self.db)
+        # transaction_list.sort(key=lambda t: -(t[1].transaction.tip))
+        # transaction_list = transaction_list[:self.max_transaction_num]
+        # transaction_list.sort(key=lambda t: t[1].transaction.timestamp)
+        # flag_list = []
+        # id_list = []
+        # for t in transaction_list:
+        #     flag_list.append(1)
+        #     id_list.append(t[0])
+        # mysqlite.update_transaction(self.db, id_list, flag_list)
+        pass
+
+
+
 
 # *********************** end of mining logic *************************
 
@@ -183,7 +219,15 @@ class PACoin:
         cursor = self.db.cursor()
         cursor.execute(
             "CREATE TABLE IF NOT EXISTS peers (host VARCHAR(128) PRIMARY KEY, latency REAL)")
+        cursor.execute(
+            "CREATE TABLE IF NOT EXISTS transactions (id INTEGER PRIMARY KEY AUTOINCREMENT, verified INTEGER, data BLOB)")
+        cursor.execute(
+            "CREATE TABLE IF NOT EXISTS blocks (block_index INTEGER, block BLOB)")
+        cursor.execute(
+            "CREATE TABLE IF NOT EXISTS bank (address VARCHAR(64), balance INTEGER)")
+        self.db.commit()
         cursor.close()
+        # self.test_db()
         for peer in self.peers:
             self.update_latency(peer, 0.0)
         signal.signal(signal.SIGINT, self.KeyboardInterruptHandler)

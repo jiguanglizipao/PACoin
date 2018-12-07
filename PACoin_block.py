@@ -4,14 +4,10 @@ import time
 import pickle
 import random
 import PACrypto as crypto
+import PACoin_utils as utils
 
 # pickle protocol is forced to be 2
 pickle_protocol = 2
-
-def PACoin_hash(data):
-    if isinstance(data, bytes):
-        return crypto.generate_hash(data)
-    return crypto.generate_hash(pickle.dumps(data, protocol=pickle_protocol))
 
 class MerkelTree:
 
@@ -41,7 +37,7 @@ class MerkelTree:
             depth += 1
 
         for transaction in transaction_list:
-            value = PACoin_hash(transaction)
+            value = utils.PACoin_hash(transaction)
             self.node_list.append(self.Node(0, depth, value))
         for i in range(self.transaction_num, n):
             self.node_list.append(self.node_list[-1])
@@ -57,7 +53,7 @@ class MerkelTree:
             v1 = self.node_list[i].value
             v2 = self.node_list[i+1].value
             m = str(v1) + str(v2)
-            self.node_list.append( self.Node(1, depth-1, PACoin_hash(m),
+            self.node_list.append( self.Node(1, depth-1, utils.PACoin_hash(m),
                             self.node_list[i], self.node_list[i-1] ))
         e = len(self.node_list)
         self.build(s, e, depth-1)
@@ -73,44 +69,47 @@ class MerkelTree:
 
 class Block:
 
-    def __init__(self, version, parent_hash, transaction_list, timestamp, index):
+    def __init__(self, version, parent_hash, transaction_list, threshold, timestamp, index):
         self.version = version
         self.parent_hash = parent_hash
         self.transaction_list = transaction_list
+        self.threshold = threshold
         self.timestamp = timestamp
         self.index = index
 
         merkle_tree = MerkelTree(self.transaction_list)
         self.merkle_root = merkle_tree.root
 
-    def set_pow_n(pow_n):
+    def set_pow_n(self, pow_n):
         self.pow_n = pow_n
 
     def serialized(self):
         return pickle.dumps(self, protocol=pickle_protocol)
 
-def select_transactions(transactions):
-    # TODO: select those with high tips
-    # TODO: limited number
-    return transactions
+class Transaction:
 
-def get_last_block_hash():
-    # TODO: fetch from sqlite
-    return PACoin_hash('a')
+    class RawTransaction:
 
-def mine(version, all_transactions, index, threshold, n_try):
-    transaction_list = select(all_transactions)
-    parent_hash = get_last_block_hash()
-    block = Block(version, parent_hash, transaction_list, time.time(), index)
-    
-    for i in range(n):
-        n = int(random.random() * pow(2, 64))
-        block.set_pow_n(n)
-        h = PACoin_hash(block.serialized())
-        if h < threshold:
-            return block
+        def __init__(self, send_address, recive_address, amount, tip, timestamp, pub_key):
+            self.send_address = send_address
+            self.recive_address = recive_address
+            self.amount = amount
+            self.tip = tip
+            self.timestamp = timestamp
+            self.pub_key = pub_key
 
-    return None
+        def serialized(self):
+            return pickle.dumps(self, protocol=pickle_protocol)
+
+    def __init__(self, send_address, recive_address, amount, tip, timestamp, pub_key):
+        self.transaction = self.RawTransaction(send_address, recive_address, amount, tip, timestamp, pub_key)
+        self.signature = None
+
+    def sign(self, pkey):
+        self.signature = crypto.generate_sign(self.transaction.serialized(), pkey)
+
+    def serialized(self):
+            return pickle.dumps(self, protocol=pickle_protocol)
 
 
 
