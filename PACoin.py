@@ -235,8 +235,6 @@ class PACoin:
             "CREATE TABLE IF NOT EXISTS transactions (id INTEGER PRIMARY KEY AUTOINCREMENT, verified INTEGER, data BLOB)")
         cursor.execute(
             "CREATE TABLE IF NOT EXISTS blocks (block_index INTEGER, block BLOB)")
-        cursor.execute(
-            "CREATE TABLE IF NOT EXISTS bank (address VARCHAR(64), balance INTEGER)")
         self.db.commit()
         cursor.close()
         # self.test_db()

@@ -87,6 +87,7 @@ class Block:
         self.threshold = threshold
         self.timestamp = timestamp
         self.index = index
+        self.myaddr = myaddr
         self.fee = 1  # TODO: dynamic set base fee
 
         fee = self.fee
