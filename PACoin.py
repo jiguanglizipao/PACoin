@@ -51,12 +51,15 @@ class PACoin:
         self.db_mutex = threading.Lock()
         self.timeout = timeout
         self.peer_num = peer_num
+        self.pkey = PACrypto.generate_private_key()
+        self.pubkey = PACrypto.generate_public_key(self.pkey)
+        self.address = PACrypto.generate_address(self.pubkey)
         atexit.register(self.cleanup)
 
         # ******* mining logic *******
         self.version = 0
         self.max_transaction_num = 10
-        self.threshold = 0.9
+        self.threshold = 12
 
     def cleanup(self):
         self.db.commit()
@@ -163,27 +166,37 @@ class PACoin:
 
     def update_block_header(self):
         note = "should be atomic......"
-        transaction_list = mysqlite.get_unverified_transactions(self.db, self.db_mutex)
+        transaction_list = mysqlite.get_unverified_transactions(
+            self.db, self.db_mutex)
         transaction_list.sort(key=lambda t: -(t[1].transaction.tip))
         transaction_list = transaction_list[:self.max_transaction_num]
         transaction_list.sort(key=lambda t: t[1].transaction.timestamp)
 
         # TODO: verify those transactions
         # TODO: fetch parent hash from sqlite
-        last_block_hash = mysqlite.get_last_block_hash(self.db, self.db_mutex)
-        index = 0
-        self.block_on_trying = PACoin_block.Block(self.version, last_block_hash, transaction_list,  time.time(), index)
+        index, last_block_hash = mysqlite.get_last_block_idx_hash(
+            self.db, self.db_mutex)
+        self.block_on_trying = PACoin_block.Block(
+            self.version, last_block_hash, transaction_list, self.threshold, int(time.time()), index + 1, self.address)
 
-    def mine(self, threshold):
+    def mine(self):
+        retry = 2**self.threshold
+        self.update_block_header()
         # TODO: need to be modified
-        n = int(random.random() * pow(2, 64))
-        self.block_on_trying.set_pow_n(n)
-        h = utils.PACoin_hash(self.block_on_trying.serialized())
-        if utils.validate_hash(h, threshold):
-            # success!
-            pass
-        return None
-    
+        for i in range(0, retry):
+            n = int(random.random() * pow(2, 64))
+            self.block_on_trying.set_nonce(n)
+            h = utils.PACoin_hash(self.block_on_trying.serialized())
+            if utils.validate_hash(h, self.threshold):
+                mysqlite.write_block(
+                    self.db, self.db_mutex, self.block_on_trying.index, self.block_on_trying)
+                print("{\n    " + "\n    ".join("{}: {}".format(k, v)
+                      for k, v in self.block_on_trying.__dict__.items()) + "\n}")
+                print("success", h)
+                # success!
+                return True
+        return False
+
     def test_db(self):
         # for i in range(6):
         #     t = utils.generate_random_transaction()
@@ -201,10 +214,9 @@ class PACoin:
         # for t in transaction_list:
         #     flag_list.append(1)
         #     id_list.append(t[0])
-        # mysqlite.update_transaction(self.db, self.db_mutex, id_list, flag_list)
+        # mysqlite.update_transaction(self.db, self.db_mutex, id_list,
+        # flag_list)
         pass
-
-
 
 
 # *********************** end of mining logic *************************
@@ -233,6 +245,7 @@ class PACoin:
         signal.signal(signal.SIGINT, self.KeyboardInterruptHandler)
         self.serve()
         self.loop(10, self.update_peers)
+        self.loop(1, self.mine)
         while not self.to_exit:
             time.sleep(1)
 

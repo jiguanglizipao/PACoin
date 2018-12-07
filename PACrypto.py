@@ -10,7 +10,7 @@ import cryptography.hazmat.primitives.hashes
 def generate_private_key():
     pkey = cryptography.hazmat.primitives.asymmetric.ec.generate_private_key(
         cryptography.hazmat.primitives.asymmetric.ec.SECP256K1(), cryptography.hazmat.backends.default_backend())
-    pkey_hex = '{:x}'.format(pkey.private_numbers().private_value)
+    pkey_hex = '{:0>64x}'.format(pkey.private_numbers().private_value)
     return pkey_hex
 
 
@@ -18,8 +18,8 @@ def generate_public_key(pkey_hex):
     pkey = cryptography.hazmat.primitives.asymmetric.ec.derive_private_key(
         int(pkey_hex, base=16), cryptography.hazmat.primitives.asymmetric.ec.SECP256K1(), cryptography.hazmat.backends.default_backend())
     pubkey = pkey.public_key()
-    pubkey_hex_x = '{:x}'.format(pubkey.public_numbers().x)
-    pubkey_hex_y = '{:x}'.format(pubkey.public_numbers().y)
+    pubkey_hex_x = '{:0>64x}'.format(pubkey.public_numbers().x)
+    pubkey_hex_y = '{:0>64x}'.format(pubkey.public_numbers().y)
     pubkey_hex = pubkey_hex_x + pubkey_hex_y
     return pubkey_hex
 
@@ -45,7 +45,7 @@ def generate_address(pubkey_hex):
     pubkey_hash_base64 = base64.b64encode(pubkey_hash)
 #    pubkey_hash = int.from_bytes(pubkey_hash, byteorder='big')
 #    print('{:x}'.format(pubkey_hash))
-    return pubkey_hash_base64
+    return pubkey_hash_base64.decode("utf-8")
 
 
 def verify_address(address, pubkey_hex):
@@ -81,7 +81,7 @@ def generate_hash(data):
     hash_engine = cryptography.hazmat.primitives.hashes.Hash(
         cryptography.hazmat.primitives.hashes.SHA512(), cryptography.hazmat.backends.default_backend())
     hash_engine.update(data)
-    return '{:x}'.format(int.from_bytes(hash_engine.finalize(), byteorder='big'))
+    return '{:0>128x}'.format(int.from_bytes(hash_engine.finalize(), byteorder='big'))
 
 
 # pkey = cryptography.hazmat.primitives.asymmetric.ec.derive_private_key(int(pkey_hex, base=16), cryptography.hazmat.primitives.asymmetric.ec.SECP256K1(), cryptography.hazmat.backends.default_backend())
