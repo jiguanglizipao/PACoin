@@ -30,13 +30,15 @@ class PACoin:
         def ping(self, request, context):
             ip = context.peer().split(':')[1]
 #            print("receive ping: ", ip, request.port)
-            self.pacoin.init_latency("%s:%d" % (ip, request.port))
+            mysqlite.init_latency(self.pacoin.db, self.pacoin.db_mutex, "%s:%d" % (ip, request.port),
+                                  self.pacoin.timeout, self.pacoin.bind, self.pacoin.port)
             return PACoin_pb2.PingReply(ret=PACoin_pb2.SUCCESS)
 
         def pullPeers(self, request, context):
             ip = context.peer().split(':')[1]
 #            print("receive pullPeers: ", ip, request.num)
-            return PACoin_pb2.PullPeersReply(ret=PACoin_pb2.SUCCESS, hosts=self.pacoin.list_peers(request.num))
+            return PACoin_pb2.PullPeersReply(ret=PACoin_pb2.SUCCESS,
+                                             hosts=mysqlite.list_peers(self.pacoin.db, self.pacoin.db_mutex, request.num))
 
     def KeyboardInterruptHandler(self, signum, frame):
         self.to_exit = True
@@ -65,57 +67,6 @@ class PACoin:
         self.db.commit()
         self.db.close()
 
-    def update_latency(self, peer, latency):
-        if peer == "%s:%d" % (self.bind, self.port):
-            return
-        self.db_mutex.acquire()
-        cursor = self.db.cursor()
-        cursor.execute(
-            "UPDATE peers SET latency = ? WHERE host = ?", (latency, peer))
-        if cursor.rowcount == 0:
-            cursor.execute(
-                "INSERT INTO peers (host, latency) VALUES (?, ?)", (peer, latency))
-#        cursor.execute("SELECT * FROM peers WHERE host = ?", (peer, ))
-#        print(cursor.fetchone())
-        cursor.close()
-        self.db_mutex.release()
-
-    def init_latency(self, peer):
-        if peer == "%s:%d" % (self.bind, self.port):
-            return
-        self.db_mutex.acquire()
-        cursor = self.db.cursor()
-        cursor.execute("SELECT * FROM peers WHERE host = ?", (peer, ))
-        if not cursor.fetchone():
-            cursor.execute(
-                "INSERT INTO peers (host, latency) VALUES (?, ?)", (peer, self.timeout))
-#        print(cursor.fetchone())
-        cursor.close()
-        self.db_mutex.release()
-
-    def list_peers(self, num=-1):
-        self.db_mutex.acquire()
-        cursor = self.db.cursor()
-        if num >= 0:
-            cursor.execute(
-                "SELECT host FROM peers ORDER BY random() ASC LIMIT ?", (num, ))
-        else:
-            cursor.execute(
-                "SELECT host FROM peers ORDER BY random() ASC")
-#        print(cursor.fetchone())
-        arr = [r[0] for r in cursor.fetchall()]
-        cursor.close()
-        self.db_mutex.release()
-        return arr
-
-    def delete_peer(self, peer):
-        self.db_mutex.acquire()
-        cursor = self.db.cursor()
-        cursor.execute(
-            "DELETE FROM peers WHERE host = ?", (peer, ))
-        cursor.close()
-        self.db_mutex.release()
-
     def serve(self):
         PACoin_pb2_grpc.add_P2PDiscoveryServicer_to_server(
             self.P2PDiscoveryServicer(self), self.server)
@@ -132,9 +83,9 @@ class PACoin:
                 latency = time.time() - start_time
 #                print("ping ", peer, ", latency = %.2f ms" %
 #                      (latency.real * 1e3))
-                self.update_latency(peer, 1000 * latency)
+                mysqlite.update_latency(self.db, self.db_mutex, peer, 1000 * latency, self.bind, self.port)
         except Exception as e:
-            self.delete_peer(peer)
+            mysqlite.delete_peer(self.db, self.db_mutex, peer)
             print(e)
 
     def pullPeers(self, peer):
@@ -145,22 +96,22 @@ class PACoin:
                     PACoin_pb2.PullPeersRequest(num=self.peer_num), timeout=self.timeout * 1e-3)
 #                print("pullPeers ", peer, ", hosts = ", response.hosts)
                 for host in response.hosts:
-                    self.init_latency(host)
+                    mysqlite.init_latency(self.db, self.db_mutex, host, self.timeout, self.bind, self.port)
         except Exception as e:
-            self.delete_peer(peer)
+            mysqlite.delete_peer(self.db, self.db_mutex, peer)
             print(e)
 
     def update_peers(self):
-        peers = self.list_peers(self.peer_num)
+        peers = mysqlite.list_peers(self.db, self.db_mutex, self.peer_num)
         for p in peers:
             self.ping(p)
             self.pullPeers(p)
 
-        if len(self.list_peers(self.peer_num)) == 0:
+        if len(mysqlite.list_peers(self.db, self.db_mutex, self.peer_num)) == 0:
             for peer in self.peers:
-                self.update_latency(peer, 0.0)
+                mysqlite.update_latency(self.db, self.db_mutex, peer, 0.0, self.bind, self.port)
 
-        print("Peers list size: ", len(self.list_peers()))
+        print("Peers list size: ", len(mysqlite.list_peers(self.db, self.db_mutex)))
 
 # *********************** mining logic *************************
 
@@ -239,7 +190,7 @@ class PACoin:
         cursor.close()
         # self.test_db()
         for peer in self.peers:
-            self.update_latency(peer, 0.0)
+            mysqlite.update_latency(self.db, self.db_mutex, peer, 0.0, self.bind, self.port)
         signal.signal(signal.SIGINT, self.KeyboardInterruptHandler)
         self.serve()
         self.loop(10, self.update_peers)

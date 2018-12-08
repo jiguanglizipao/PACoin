@@ -5,6 +5,60 @@ import PACoin_block
 import PACrypto
 import PACoin_utils as utils
 
+def list_peers(db, db_mutex, num=-1):
+    db_mutex.acquire()
+    cursor = db.cursor()
+    if num >= 0:
+        cursor.execute(
+            "SELECT host FROM peers ORDER BY random() ASC LIMIT ?", (num, ))
+    else:
+        cursor.execute(
+            "SELECT host FROM peers ORDER BY random() ASC")
+#        print(cursor.fetchone())
+    arr = [r[0] for r in cursor.fetchall()]
+    cursor.close()
+    db_mutex.release()
+    return arr
+
+
+def delete_peer(db, db_mutex, peer):
+    db_mutex.acquire()
+    cursor = db.cursor()
+    cursor.execute(
+        "DELETE FROM peers WHERE host = ?", (peer, ))
+    cursor.close()
+    db_mutex.release()
+
+
+def init_latency(db, db_mutex, peer, timeout, bind, port):
+    if peer == "%s:%d" % (bind, port):
+        return
+    db_mutex.acquire()
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM peers WHERE host = ?", (peer, ))
+    if not cursor.fetchone():
+        cursor.execute(
+            "INSERT INTO peers (host, latency) VALUES (?, ?)", (peer, timeout))
+#        print(cursor.fetchone())
+    cursor.close()
+    db_mutex.release()
+
+
+def update_latency(db, db_mutex, peer, latency, bind, port):
+    if peer == "%s:%d" % (bind, port):
+        return
+    db_mutex.acquire()
+    cursor = db.cursor()
+    cursor.execute(
+        "UPDATE peers SET latency = ? WHERE host = ?", (latency, peer))
+    if cursor.rowcount == 0:
+        cursor.execute(
+            "INSERT INTO peers (host, latency) VALUES (?, ?)", (peer, latency))
+#        cursor.execute("SELECT * FROM peers WHERE host = ?", (peer, ))
+#        print(cursor.fetchone())
+    cursor.close()
+    db_mutex.release()
+
 
 def write_transaction(db, db_mutex, verified, transaction):
     db_mutex.acquire()
