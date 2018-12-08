@@ -30,7 +30,7 @@ class MerkelTree:
         self.node_list = []
 
         if(self.transaction_num == 0):
-            return NULL
+            return None
 
         n = 1
         depth = 0

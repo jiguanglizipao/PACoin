@@ -55,11 +55,11 @@ class Transaction:
         self.tips = tips
 
     def get_outvalue(self, idx):
-        return txouts[idx].value
+        return self.txouts[idx].value
 
     def serialized(self):
-            return pickle.dumps(self, protocol=pickle_protocol)
+        return pickle.dumps(self, protocol=pickle_protocol)
 
     def sign(self, txout_idx, pkey):
         assert txout_idx < 2**32 and txout_idx >= 0
-        return crypto.generate_sign(self.transaction.serialized() + txout_idx.to_bytes(4, 'big'), pkey)
+        return crypto.generate_sign(self.serialized() + txout_idx.to_bytes(4, 'big'), pkey)

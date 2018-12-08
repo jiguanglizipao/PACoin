@@ -33,18 +33,6 @@ def generate_address(pubkey_hex):
     pubkey_hash_base64 = base64.b64encode(pubkey_hash)
 #    pubkey_hash = int.from_bytes(pubkey_hash, byteorder='big')
 #    print('{:x}'.format(pubkey_hash))
-    return pubkey_hash_base64
-
-
-def generate_address(pubkey_hex):
-    pubkey_bytes = int(pubkey_hex, base=16).to_bytes(64, byteorder='big')
-    hash_engine = cryptography.hazmat.primitives.hashes.Hash(
-        cryptography.hazmat.primitives.hashes.SHA512(), cryptography.hazmat.backends.default_backend())
-    hash_engine.update(int(pubkey_hex, base=16).to_bytes(64, byteorder='big'))
-    pubkey_hash = hash_engine.finalize()
-    pubkey_hash_base64 = base64.b64encode(pubkey_hash)
-#    pubkey_hash = int.from_bytes(pubkey_hash, byteorder='big')
-#    print('{:x}'.format(pubkey_hash))
     return pubkey_hash_base64.decode("utf-8")
 
 
