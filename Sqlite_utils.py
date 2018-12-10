@@ -38,7 +38,7 @@ def init_latency(db, db_mutex, peer, timeout, bind, port):
     cursor.execute("SELECT * FROM peers WHERE host = ?", (peer, ))
     if not cursor.fetchone():
         cursor.execute(
-            "INSERT INTO peers (host, latency) VALUES (?, ?)", (peer, timeout))
+            "INSERT INTO peers (host, latency) VALUES (?, ?)", (peer, timeout, ))
 #        print(cursor.fetchone())
     cursor.close()
     db_mutex.release()
@@ -64,20 +64,22 @@ def write_transaction(db, db_mutex, verified, transaction):
     db_mutex.acquire()
     cursor = db.cursor()
     data = transaction.serialized()
+    hash = utils.PACoin_hash(data)
     cursor.execute(
-        "INSERT INTO transactions (verified, data) VALUES (?, ?)", (verified, data, ))
+        "INSERT INTO transactions (hash, verified, data) VALUES (?, ?)", (hash, verified, data, ))
     db.commit()
     cursor.close()
     db_mutex.release()
 
 
-def update_transaction(db, db_mutex, id_list, flag_list):
+def update_verified_transaction(db, db_mutex, transaction_list, flag_list):
+    assert len(transaction_list) == len(flag_list)
     db_mutex.acquire()
     cursor = db.cursor()
-    assert(len(id_list) == len(flag_list))
-    for (i, f) in zip(id_list, flag_list):
+    for (t, f) in zip(transaction_list, flag_list):
+        h = utils.PACoin_hash(t)
         cursor.execute(
-            "UPDATE transactions SET verified = %d WHERE id = %d" % (f, i))
+            "UPDATE transactions SET verified = %d WHERE hash = %s" % (f, h))
     db.commit()
     cursor.close()
     db_mutex.release()
@@ -98,22 +100,34 @@ def write_block(db, db_mutex, block_index, block):
     db_mutex.release()
 
 
-def get_unverified_transactions(db, db_mutex,):
+def get_unverified_transactions(db, db_mutex):
     db_mutex.acquire()
     cursor = db.cursor()
     sql = """
-            SELECT id, data
+            SELECT data
             FROM transactions
             WHERE verified = 0 """
     res = cursor.execute(sql)
     transaction_list = []
     for row in res:
-        pair = (row[0], utils.deserialize(row[1]))
-        transaction_list.append(pair)
+        transaction_list.append(row[0])
     db.commit()
     cursor.close()
     db_mutex.release()
     return transaction_list
+
+def get_transaction(db, db_mutex, hash):
+    db_mutex.acquire()
+    cursor = db.cursor()
+    cursor.execute(
+        "SELECT data FROM transactions WHERE hash=%s" % hash)
+    res = cursor.fetchone()
+    db.commit()
+    cursor.close()
+    db_mutex.release()
+    if not res:
+        return None
+    return utils.deserialize(res)
 
 
 def get_last_block_idx_hash(db, db_mutex,):

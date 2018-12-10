@@ -15,8 +15,8 @@ class Transaction:
     class Txin:
 
         def __init__(self, pre_txn_hash, pre_txout_idx, pre_txout_pubkey, pre_txout_sign):
-            # pre_txn_hash is in base16
-            # pre_txn_sign is in base64
+            # pre_txn_hash is in base16(128)
+            # pre_txn_sign is in base64(96)
             assert isinstance(pre_txn_hash, str) and len(pre_txn_hash) == 128
             assert isinstance(
                 pre_txout_idx, int) and pre_txout_idx < 2**32 and pre_txout_idx >= 0
@@ -32,13 +32,14 @@ class Transaction:
     class Txout:
 
         def __init__(self, value, address):
-            # address is in base64
+            # address is in base64(96)
             assert isinstance(value, int) and value >= 0
             assert isinstance(address, str) and len(address) == 88
             self.value = value
             self.address = address
 
-    # The first txn of a block is mining reward. txins is coinbase, pre_txn_hash=0x000...000, pre_txout_idx=0, pre_txout_pubkey=pre_txout_sign=0x000...000.
+    # The first txn of a block is mining reward.
+    # txins is coinbase, pre_txn_hash=0x000...000, pre_txout_idx=0, pre_txout_pubkey=pre_txout_sign=0x000...000.
     # Tips is the first txout, the address is coinbase ( 0x000...000 ).
     def __init__(self, txins, txouts, timestamp, tips):
         assert isinstance(txins, list)
