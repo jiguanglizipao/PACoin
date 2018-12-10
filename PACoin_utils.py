@@ -1,6 +1,7 @@
 import pickle
 import random
 import time
+import base64
 
 import PACrypto as crypto
 import PACoin_block
@@ -139,3 +140,11 @@ def validate_block(db, db_mutex, block, version, reward, threshold):
             return False
 
     return True
+
+
+def bytes2Data(bs):
+    return base64.b64encode(bs).decode("utf-8")
+
+
+def data2Bytes(data: str):
+    return base64.b64decode(data.encode("utf-8"))

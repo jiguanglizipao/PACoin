@@ -8,6 +8,7 @@ import atexit
 import argparse
 import sqlite3
 import random
+import base64
 
 import grpc
 import PACoin_pb2
@@ -63,6 +64,9 @@ class PACoin:
         self.max_transaction_num = 10
         self.threshold = 12
         self.mining_reward = 1
+
+        # ****** block transfer logic *****
+        self.update_blocks_mutex = False
 
     def cleanup(self):
         self.db.commit()
@@ -178,12 +182,13 @@ class PACoin:
 # ********************* block transfer logic *******************
 
     class BlockTransfer(PACoin_pb2_grpc.BlockTransferServicer):
-        def __init__(self, pacoin: PACoin):
+        def __init__(self, pacoin):
             self.pacoin = pacoin
 
         def sendBlocks(self, request, context):
             my_curr = mysqlite.get_total_block_num(self.pacoin.db, self.pacoin.db_mutex)
-            blk = PACoin_block.Block.unserialize(request.block.data)
+            b_bytes = utils.data2Bytes(request.block.data)
+            blk = PACoin_block.Block.unserialize(b_bytes)
             if blk is None:
                 # FIXME: DDOS
                 print("blk is None.")
@@ -199,7 +204,7 @@ class PACoin:
 
         def pullBlocks(self, request, context):
             blks = mysqlite.get_block_range(self.pacoin.db, self.pacoin.db_mutex, request.base, request.num)
-            blks_data = [PACoin_pb2.Block(data=blk) for blk in blks]
+            blks_data = [PACoin_pb2.Block(data=utils.bytes2Data(blk)) for blk in blks]
 
             return PACoin_pb2.PullBlocksReply(ret=PACoin_pb2.SUCCESS, blocks=blks_data)
 
@@ -210,37 +215,80 @@ class PACoin:
                 curr=my_curr
             )
 
-    def update_blocks_peer(self, peer):
-        my_curr = mysqlite.get_total_block_num(self.db, self.db_mutex)
-        try:
-            with grpc.insecure_channel(peer) as channel:
-                stub = PACoin_pb2_grpc.BlockTransferStub(channel)
-                response = stub.syncStatus(
-                    PACoin_pb2.SyncStatusRequest(curr=my_curr),
-                    timeout=self.timeout * 1e-3)
+    # def rollback(self, peer):
+    #     my_curr = mysqlite.get_total_block_num(self.db, self.db_mutex)
+    #     try:
+    #         with grpc.insecure_channel(peer) as channel:
+    #             pass
+    #     except Exception as e:
+    #         mysqlite.delete_peer(self.db, self.db_mutex, peer)
+    #         print(e)
 
-                num = response.curr - my_curr
-                if num > 0:
-                    response = stub.pullBlocks(
-                        PACoin_pb2.PullBlocksRequest(base=my_curr, num=num),
-                        timeout=self.timeout * 1e-3
-                    )
-                    if response.ret != PACoin_pb2.SUCCESS:
-                        print("Warning: pull blocks failed but expect not.")
-                    else:
-                        for blk in response.blocks:
-                            if not mysqlite.write_block(self.db, self.db_mutex, my_curr, blk.data):
-                                print("Warning: DB is modified unexpectedly.")
-                            my_curr += 1
+    # def update_blocks_peer(self, peer):
+    #     my_curr = mysqlite.get_total_block_num(self.db, self.db_mutex)
+    #     try:
+    #         with grpc.insecure_channel(peer) as channel:
+    #             stub = PACoin_pb2_grpc.BlockTransferStub(channel)
+    #             response = stub.syncStatus(
+    #                 PACoin_pb2.SyncStatusRequest(curr=my_curr),
+    #                 timeout=self.timeout * 1e-3)
 
-        except Exception as e:
-            mysqlite.delete_peer(self.db, self.db_mutex, peer)
-            print(e)
+    #             num = response.curr - my_curr
+    #             if num > 0:
+    #                 response = stub.pullBlocks(
+    #                     PACoin_pb2.PullBlocksRequest(base=my_curr, num=num),
+    #                     timeout=self.timeout * 1e-3
+    #                 )
+    #                 if response.ret != PACoin_pb2.SUCCESS or len(response.blocks) != num:
+    #                     print("Warning: pull blocks failed but expect not.")
+    #                     return
 
-    def update_blocks(self):
-        peers = mysqlite.list_peers(self.db, self.db_mutex, self.peer_num)
-        for peer in peers:
-            self.update_blocks_peer(peer)
+    #                 # Verify DB
+    #                 idx, p_hash = mysqlite.get_last_block_idx_hash(self.db, self.db_mutex)
+    #                 if idx != my_curr:
+    #                     print("Warning: DB is modified unexpectedly.")
+    #                     return
+                    
+    #                 # Maybe rollback
+    #                 b_bytes = utils.data2Bytes(response.blocks[0].data)
+    #                 b = PACoin_block.Block.unserialize(b_bytes)
+    #                 if b.parent_hash != p_hash:
+    #                     self.rollback(peer)
+    #                     return
+
+    #                 # Verify Blocks
+    #                 for blk in response.blocks:
+    #                     b_bytes = utils.data2Bytes(blk.data)
+    #                     b = PACoin_block.Block.unserialize(b_bytes)
+    #                     if b.parent_hash != p_hash or b.index != idx:
+    #                         return
+    #                     p_hash = utils.PACoin_hash(b_bytes)
+    #                     idx += 1
+
+    #                 # Add in
+    #                 for blk in response.blocks:
+    #                     b_bytes = utils.data2Bytes(blk.data)
+    #                     if not mysqlite.write_block(self.db, self.db_mutex, my_curr, b_bytes):
+    #                         print("Warning: DB is modified unexpectedly.")
+    #                         my_curr += 1
+
+    #     except Exception as e:
+    #         mysqlite.delete_peer(self.db, self.db_mutex, peer)
+    #         print(e)
+
+    # def update_blocks(self):
+    #     if self.update_blocks_mutex:
+    #         return
+
+    #     self.update_blocks_mutex = True
+    #     peers = mysqlite.list_peers(self.db, self.db_mutex, self.peer_num)
+    #     for peer in peers:
+    #         self.update_blocks_peer(peer)
+    #     self.update_blocks_mutex = False
+
+    def update_blocks_and_mine(self):
+        # self.update_blocks()
+        self.mine()
 
     def loop(self, seconds, func, *args):
         func(*args)
@@ -263,8 +311,7 @@ class PACoin:
             mysqlite.update_latency(self.db, self.db_mutex, peer, 0.0, self.bind, self.port)
         signal.signal(signal.SIGINT, self.KeyboardInterruptHandler)
         self.serve()
-        self.loop(10, self.update_peers)
-        self.loop(1, self.mine)
+        self.loop(10, self.update_blocks_and_mine)
         while not self.to_exit:
             time.sleep(1)
 

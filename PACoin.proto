@@ -80,14 +80,13 @@ message SendBlocksReply
 
 message PullBlocksRequest
 {
-    uint64 base = 1;
-    uint64 num = 2;
+    uint64 idx = 1;
 }
 
 message PullBlocksReply
 {
     ERRNO ret = 1;
-    repeated Block blocks = 2;
+    Block blocks = 2;
 }
 
 message SyncStatusRequest
