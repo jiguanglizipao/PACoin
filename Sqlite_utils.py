@@ -87,15 +87,87 @@ def write_block(db, db_mutex, block_index, block):
     # TODO: not tested
     db_mutex.acquire()
     cursor = db.cursor()
-    data = block.serialized()
-    res = cursor.execute(
+    cursor.execute(
         "SELECT block FROM blocks WHERE block_index = ?", (block_index, ))
+    ret = False
     if not cursor.fetchone():
         cursor.execute(
-            "INSERT INTO blocks (block_index, block) VALUES (?, ?)", (block_index, block.serialized(), ))
+            "INSERT INTO blocks (block_index, block) VALUES (?, ?)", (block_index, block, ))
+        ret = True
     db.commit()
     cursor.close()
     db_mutex.release()
+
+    return ret
+
+
+def get_block(db, db_mutex, block_index):
+    db_mutex.acquire()
+    cursor = db.cursor()
+    cursor.execute(
+        "SELECT block FROM blocks WHERE block_index = ?", (block_index, ))
+    ret = None
+    res = cursor.fetchone()
+    if res:
+       ret = res[0]
+
+    db.commit()
+    cursor.close()
+    db_mutex.release()
+    return ret
+
+
+# block_index_range [l, r)
+def get_block_range(db, db_mutex, base, num):
+    db_mutex.acquire()
+    cursor = db.cursor()
+    cursor.execute(
+        "SELECT block FROM blocks WHERE (block_index >= ? AND block_index < ?) ORDER BY block_index ASC",
+        (base, base + num)
+    )
+    ret = cursor.fetchall()
+    if len(ret) != num or ret[0][0] != base:
+        # Not enough blocks or blocks don't begin with block_index_range[0]
+        return []
+    ret = [r[0] for r in ret]
+    db.commit()
+    cursor.close()
+    db_mutex.release()
+    return ret
+
+
+def get_total_block_num(db, db_mutex):
+    db_mutex.acquire()
+    cursor = db.cursor()
+    cursor.execute(
+        "SELECT block_index FROM blocks ORDER BY block_index DESC LIMIT 1")
+    res = cursor.fetchone()
+    if not res:
+        num = 0
+    else:
+        num = res[0] + 1
+    db.commit()
+    cursor.close()
+    db_mutex.release()
+    return num
+
+def get_last_block_idx_hash(db, db_mutex,):
+    # TODO: not tested
+    db_mutex.acquire()
+    cursor = db.cursor()
+    cursor.execute(
+        "SELECT block_index, block FROM blocks ORDER BY block_index DESC LIMIT 1")
+    res = cursor.fetchone()
+    if not res:
+        index = 0
+        block_hash = utils.generate_zero(128)
+    else:
+        index = res[0]
+        block_hash = utils.PACoin_hash(res[1])
+    db.commit()
+    cursor.close()
+    db_mutex.release()
+    return (index, block_hash)
 
 
 def get_unverified_transactions(db, db_mutex,):
@@ -115,21 +187,3 @@ def get_unverified_transactions(db, db_mutex,):
     db_mutex.release()
     return transaction_list
 
-
-def get_last_block_idx_hash(db, db_mutex,):
-    # TODO: not tested
-    db_mutex.acquire()
-    cursor = db.cursor()
-    cursor.execute(
-        "SELECT block_index, block FROM blocks ORDER BY block_index DESC LIMIT 1")
-    res = cursor.fetchone()
-    if not res:
-        index = 0
-        block_hash = utils.generate_zero(128)
-    else:
-        index = res[0]
-        block_hash = utils.PACoin_hash(res[1])
-    db.commit()
-    cursor.close()
-    db_mutex.release()
-    return (index, block_hash)

@@ -70,7 +70,7 @@ message Block
 
 message SendBlocksRequest
 {
-    repeated Block blocks = 1;
+    Block blocks = 1;
 }
 
 message SendBlocksReply

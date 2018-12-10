@@ -110,6 +110,14 @@ class Block:
     def serialized(self):
         return pickle.dumps(self, protocol=pickle_protocol)
 
+    @staticmethod
+    def unserialize(blk):
+        block = pickle.loads(blk)
+        if isinstance(block, Block):
+            return block
+        else:
+            return None
+
 # if __name__ == '__main__':
 
 #     l = []
