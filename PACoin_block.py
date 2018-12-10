@@ -73,7 +73,7 @@ class MerkelTree:
 
 class Block:
 
-    def __init__(self, version, parent_hash, transaction_list, threshold, timestamp, index, myaddr):
+    def __init__(self, version, parent_hash, transaction_list, threshold, timestamp, index, myaddr, mining_reward):
         assert isinstance(version, int) and version >= 0
         assert isinstance(parent_hash, str) and len(parent_hash) == 128
         assert isinstance(transaction_list, list)
@@ -88,12 +88,15 @@ class Block:
         self.timestamp = timestamp
         self.index = index
         self.myaddr = myaddr
-        self.fee = 1  # TODO: dynamic set base fee
+        self.fee = mining_reward
 
         fee = self.fee
         for txn in transaction_list:
             self.fee += txn.tips
 
+        # The first txn of a block is mining reward.
+        # txins is coinbase, pre_txn_hash=0x000...000, pre_txout_idx=0, pre_txout_pubkey=pre_txout_sign=0x000...000.
+        # Tips is the first txout, the address is coinbase ( 0x000...000 ).
         fee_txin = PACoin_txn.Transaction.Txin(utils.generate_zero(128),
                                                0, utils.generate_zero(128), utils.generate_zero(96))
         fee_txout = PACoin_txn.Transaction.Txout(fee, myaddr)

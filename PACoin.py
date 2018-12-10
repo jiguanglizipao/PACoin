@@ -62,6 +62,7 @@ class PACoin:
         self.version = 0
         self.max_transaction_num = 10
         self.threshold = 12
+        self.mining_reward = 1
 
     def cleanup(self):
         self.db.commit()
@@ -117,18 +118,19 @@ class PACoin:
 
     def update_block_header(self):
         note = "should be atomic......"
-        transaction_list = mysqlite.get_unverified_transactions(
+        unverified_transaction_list = mysqlite.get_unverified_transactions(
             self.db, self.db_mutex)
-        transaction_list.sort(key=lambda t: -(t[1].transaction.tip))
-        transaction_list = transaction_list[:self.max_transaction_num]
-        transaction_list.sort(key=lambda t: t[1].transaction.timestamp)
-
-        # TODO: verify those transactions
-        # TODO: fetch parent hash from sqlite
+        unverified_transaction_list.sort(key=lambda t: -(t[1].transaction.tip))
+        unverified_transaction_list = unverified_transaction_list[:self.max_transaction_num]
+        # transaction_list.sort(key=lambda t: t[1].transaction.timestamp)
+        transaction_list = []
+        for txn in unverified_transaction_list:
+            if utils.validate_transaction(self.db, self.db_mutex, txn):
+                transaction_list.append(txn)
         index, last_block_hash = mysqlite.get_last_block_idx_hash(
             self.db, self.db_mutex)
         self.block_on_trying = PACoin_block.Block(
-            self.version, last_block_hash, transaction_list, self.threshold, int(time.time()), index + 1, self.address)
+            self.version, last_block_hash, transaction_list, self.threshold, int(time.time()), index + 1, self.address, self.mining_reward)
 
     def mine(self):
         retry = 2**self.threshold
@@ -145,6 +147,7 @@ class PACoin:
                       for k, v in self.block_on_trying.__dict__.items()) + "\n}")
                 print("success", h)
                 # success!
+
                 return True
         return False
 
@@ -250,7 +253,7 @@ class PACoin:
         cursor.execute(
             "CREATE TABLE IF NOT EXISTS peers (host VARCHAR(128) PRIMARY KEY, latency REAL)")
         cursor.execute(
-            "CREATE TABLE IF NOT EXISTS transactions (id INTEGER PRIMARY KEY AUTOINCREMENT, verified INTEGER, data BLOB)")
+            "CREATE TABLE IF NOT EXISTS transactions (hash VARCHAR(128) PRIMARY KEY , verified INTEGER, data BLOB)")
         cursor.execute(
             "CREATE TABLE IF NOT EXISTS blocks (block_index INTEGER, block BLOB)")
         self.db.commit()
