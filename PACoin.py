@@ -283,8 +283,7 @@ class PACoin:
                     mysqlite.erase_block_range(
                         self.db, self.db_mutex, (cur_idx, old_idx + 1))
                     for blk in blk_list:
-                        mysqlite.write_block(
-                            self.db, self.db_mutex, old_idx, blk)
+                        assert mysqlite.write_block(self.db, self.db_mutex, old_idx, blk)
                         old_idx -= 1
                     return
 
