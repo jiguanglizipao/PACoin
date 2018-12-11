@@ -285,15 +285,17 @@ class PACoin:
                         assert mysqlite.write_block(self.db, self.db_mutex, old_idx, blk)
                         old_idx -= 1
                     assert old_idx == cur_idx
-                    return
+                    return True
                 
                 cur_idx -= 1
                 last_blk_bytes = mysqlite.get_block(self.db, self.db_mutex, cur_idx)
                 last_blk = PACoin_block.Block.unserialize(last_blk_bytes)
                 p_hash = last_blk.parent_hash
 
+            return False
         except Exception as e:
             print(e)
+            return False
 
     def update_blocks_peer(self, peer, num):
         print("update_blocks_peer, %s, %d" % (peer, num))
@@ -327,7 +329,8 @@ class PACoin:
                         print(b.parent_hash, p_hash)
                         print(b.index, my_curr)
                         if toRollback:
-                            self.rollback(stub)
+                            if self.rollback(stub):
+                                continue
                         else:
                             print("Warning: Peer is not consistent.")
                         return False
