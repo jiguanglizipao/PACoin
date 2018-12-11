@@ -376,7 +376,6 @@ class PACoin:
 
                 if num_max == 0:
                     to_exit = True
-                    print("No need to update blocks.")
                     break
 
                 cands = [can for can in candidates if can[1] == num_max]
