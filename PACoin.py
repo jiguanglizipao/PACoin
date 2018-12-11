@@ -280,14 +280,17 @@ class PACoin:
                 blk_list.append(b_bytes)
 
                 if b.parent_hash == p_hash:
-                    mysqlite.erase_block_range(
-                        self.db, self.db_mutex, (cur_idx, old_idx + 1))
+                    mysqlite.erase_block_range(self.db, self.db_mutex, (cur_idx, old_idx + 1))
                     for blk in blk_list:
                         assert mysqlite.write_block(self.db, self.db_mutex, old_idx, blk)
                         old_idx -= 1
+                    assert old_idx == cur_idx
                     return
-
+                
                 cur_idx -= 1
+                last_blk_bytes = mysqlite.get_block(self.db, self.db_mutex, cur_idx)
+                last_blk = PACoin_block.Block.unserialize(last_blk_bytes)
+                p_hash = last_blk.parent_hash
 
         except Exception as e:
             print(e)
