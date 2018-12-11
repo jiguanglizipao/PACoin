@@ -10,17 +10,16 @@ import PACoin_txn
 # pickle protocol is forced to be 2
 pickle_protocol = 2
 
+class Node:
+
+    def __init__(self, node_type, depth, value, left_child=None, right_child=None):
+        self.node_type = node_type  # define 0 as leaves and 1 as intermediate
+        self.depth = depth  # 0 as root
+        self.value = value
+        self.left_child = left_child
+        self.right_child = right_child
 
 class MerkelTree:
-
-    class Node:
-
-        def __init__(self, node_type, depth, value, left_child=None, right_child=None):
-            self.node_type = node_type  # define 0 as leaves and 1 as intermediate
-            self.depth = depth  # 0 as root
-            self.value = value
-            self.left_child = left_child
-            self.right_child = right_child
 
     def __init__(self, transaction_list):
         self.build_tree(transaction_list)
@@ -41,7 +40,7 @@ class MerkelTree:
         for transaction in transaction_list:
             assert isinstance(transaction, PACoin_txn.Transaction)
             value = utils.PACoin_hash(transaction)
-            self.node_list.append(self.Node(0, depth, value))
+            self.node_list.append(Node(0, depth, value))
         for i in range(self.transaction_num, n):
             self.node_list.append(self.node_list[-1])
 
@@ -56,7 +55,7 @@ class MerkelTree:
             v1 = self.node_list[i].value
             v2 = self.node_list[i + 1].value
             m = str(v1) + str(v2)
-            self.node_list.append(self.Node(1, depth - 1, utils.PACoin_hash(m),
+            self.node_list.append(Node(1, depth - 1, utils.PACoin_hash(m),
                                             self.node_list[i], self.node_list[i - 1]))
         e = len(self.node_list)
         self.build(s, e, depth - 1)
@@ -97,9 +96,9 @@ class Block:
         # The first txn of a block is mining reward.
         # txins is coinbase, pre_txn_hash=0x000...000, pre_txout_idx=0, pre_txout_pubkey=pre_txout_sign=0x000...000.
         # Tips is the first txout, the address is coinbase ( 0x000...000 ).
-        fee_txin = PACoin_txn.Transaction.Txin(utils.generate_zero(128),
+        fee_txin = PACoin_txn.Txin(utils.generate_zero(128),
                                                0, utils.generate_zero(128), utils.generate_zero(96))
-        fee_txout = PACoin_txn.Transaction.Txout(fee, myaddr)
+        fee_txout = PACoin_txn.Txout(fee, myaddr)
         fee_txn = PACoin_txn.Transaction([fee_txin], [fee_txout], timestamp, 0)
 
         self.transaction_list = [fee_txn] + transaction_list

@@ -9,10 +9,7 @@ import PACoin_utils as utils
 # pickle protocol is forced to be 2
 pickle_protocol = 2
 
-
-class Transaction:
-
-    class Txin:
+class Txin:
 
         def __init__(self, pre_txn_hash, pre_txout_idx, pre_txout_pubkey, pre_txout_sign):
             # pre_txn_hash is in base16(128)
@@ -29,14 +26,16 @@ class Transaction:
             self.pre_txout_pubkey = pre_txout_pubkey
             self.pre_txout_sign = pre_txout_sign
 
-    class Txout:
+class Txout:
 
-        def __init__(self, value, address):
-            # address is in base64(96)
-            assert isinstance(value, int) and value >= 0
-            assert isinstance(address, str) and len(address) == 88
-            self.value = value
-            self.address = address
+    def __init__(self, value, address):
+        # address is in base64(96)
+        assert isinstance(value, int) and value >= 0
+        assert isinstance(address, str) and len(address) == 88
+        self.value = value
+        self.address = address
+
+class Transaction:
 
     # The first txn of a block is mining reward.
     # txins is coinbase, pre_txn_hash=0x000...000, pre_txout_idx=0, pre_txout_pubkey=pre_txout_sign=0x000...000.
@@ -44,10 +43,10 @@ class Transaction:
     def __init__(self, txins, txouts, timestamp, tips):
         assert isinstance(txins, list)
         for i in txins:
-            assert isinstance(i, Transaction.Txin)
+            assert isinstance(i, Txin)
         assert isinstance(txouts, list)
         for i in txouts:
-            assert isinstance(i, Transaction.Txout)
+            assert isinstance(i, Txout)
         assert isinstance(timestamp, int) and timestamp >= 0
         assert isinstance(timestamp, int) and tips >= 0
         self.txins = txins

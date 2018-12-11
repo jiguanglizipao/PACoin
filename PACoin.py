@@ -62,7 +62,7 @@ class PACoin:
         # ******* mining logic *******
         self.version = 0
         self.max_transaction_num = 10
-        self.threshold = 12
+        self.threshold = 14
         self.mining_reward = 1
 
         # ****** block transfer logic *****
@@ -77,6 +77,8 @@ class PACoin:
     def serve(self):
         PACoin_pb2_grpc.add_P2PDiscoveryServicer_to_server(
             self.P2PDiscoveryServicer(self), self.server)
+        PACoin_pb2_grpc.add_BlockTransferServicer_to_server(
+            self.BlockTransfer(self), self.server)
         self.server.add_insecure_port("%s:%d" % (self.bind, self.port))
         self.server.start()
 
@@ -144,7 +146,7 @@ class PACoin:
 
     def mine(self):
         with self.mutable_block_mutex:
-            retry = 2**self.threshold
+            retry = 2**(self.threshold // 2)
             self.update_block_header()
             # TODO: need to be modified
             for i in range(0, retry):
@@ -225,8 +227,7 @@ class PACoin:
             return PACoin_pb2.PullBlocksReply(ret=PACoin_pb2.SUCCESS, block=blk_data)
 
         def syncStatus(self, request, context):
-            my_curr = mysqlite.get_total_block_num(
-                self.pacoin.db, self.pacoin.db_mutex)
+            my_curr = mysqlite.get_total_block_num(self.pacoin.db, self.pacoin.db_mutex)
             return PACoin_pb2.SyncStatusReply(
                 ret=PACoin_pb2.SUCCESS,
                 curr=my_curr
@@ -402,9 +403,9 @@ class PACoin:
                 self.db, self.db_mutex, peer, 0.0, self.bind, self.port)
         signal.signal(signal.SIGINT, self.KeyboardInterruptHandler)
         self.serve()
-        self.loop(10, self.update_blocks)
-        self.loop(10, self.mine)
-        self.loop(10, self.send_block_thread)
+        self.loop(1, self.update_blocks)
+        self.loop(1, self.mine)
+        # self.loop(10, self.send_block_thread)
         while not self.to_exit:
             time.sleep(1)
 
