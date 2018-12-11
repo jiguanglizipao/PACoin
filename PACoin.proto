@@ -86,7 +86,7 @@ message PullBlocksRequest
 message PullBlocksReply
 {
     ERRNO ret = 1;
-    Block blocks = 2;
+    Block block = 2;
 }
 
 message SyncStatusRequest

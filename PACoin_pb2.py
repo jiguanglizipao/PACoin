@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='PACoin',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n\x0cPACoin.proto\x12\x06PACoin\"\x1b\n\x0bPingRequest\x12\x0c\n\x04port\x18\x01 \x01(\r\"\'\n\tPingReply\x12\x1a\n\x03ret\x18\x01 \x01(\x0e\x32\r.PACoin.ERRNO\"\x1f\n\x10PullPeersRequest\x12\x0b\n\x03num\x18\x01 \x01(\x04\";\n\x0ePullPeersReply\x12\x1a\n\x03ret\x18\x01 \x01(\x0e\x32\r.PACoin.ERRNO\x12\r\n\x05hosts\x18\x02 \x03(\t\"\x1b\n\x0bTransaction\x12\x0c\n\x04\x64\x61ta\x18\x01 \x01(\t\"4\n\x0fSendTxnsRequest\x12!\n\x04txns\x18\x01 \x03(\x0b\x32\x13.PACoin.Transaction\"+\n\rSendTxnsReply\x12\x1a\n\x03ret\x18\x01 \x01(\x0e\x32\r.PACoin.ERRNO\"\x15\n\x05\x42lock\x12\x0c\n\x04\x64\x61ta\x18\x01 \x01(\t\"2\n\x11SendBlocksRequest\x12\x1d\n\x06\x62locks\x18\x01 \x01(\x0b\x32\r.PACoin.Block\"-\n\x0fSendBlocksReply\x12\x1a\n\x03ret\x18\x01 \x01(\x0e\x32\r.PACoin.ERRNO\".\n\x11PullBlocksRequest\x12\x0c\n\x04\x62\x61se\x18\x01 \x01(\x04\x12\x0b\n\x03num\x18\x02 \x01(\x04\"L\n\x0fPullBlocksReply\x12\x1a\n\x03ret\x18\x01 \x01(\x0e\x32\r.PACoin.ERRNO\x12\x1d\n\x06\x62locks\x18\x02 \x03(\x0b\x32\r.PACoin.Block\"!\n\x11SyncStatusRequest\x12\x0c\n\x04\x63urr\x18\x01 \x01(\x04\";\n\x0fSyncStatusReply\x12\x1a\n\x03ret\x18\x01 \x01(\x0e\x32\r.PACoin.ERRNO\x12\x0c\n\x04\x63urr\x18\x02 \x01(\x04*\x1f\n\x05\x45RRNO\x12\x0b\n\x07SUCCESS\x10\x00\x12\t\n\x05\x45RROR\x10\x01\x32\x81\x01\n\x0cP2PDiscovery\x12\x30\n\x04ping\x12\x13.PACoin.PingRequest\x1a\x11.PACoin.PingReply\"\x00\x12?\n\tpullPeers\x12\x18.PACoin.PullPeersRequest\x1a\x16.PACoin.PullPeersReply\"\x00\x32S\n\x13TransactionTransfer\x12<\n\x08sendTxns\x12\x17.PACoin.SendTxnsRequest\x1a\x15.PACoin.SendTxnsReply\"\x00\x32\xdb\x01\n\rBlockTransfer\x12\x42\n\nsendBlocks\x12\x19.PACoin.SendBlocksRequest\x1a\x17.PACoin.SendBlocksReply\"\x00\x12\x42\n\npullBlocks\x12\x19.PACoin.PullBlocksRequest\x1a\x17.PACoin.PullBlocksReply\"\x00\x12\x42\n\nsyncStatus\x12\x19.PACoin.SyncStatusRequest\x1a\x17.PACoin.SyncStatusReply\"\x00\x62\x06proto3')
+  serialized_pb=_b('\n\x0cPACoin.proto\x12\x06PACoin\"\x1b\n\x0bPingRequest\x12\x0c\n\x04port\x18\x01 \x01(\r\"\'\n\tPingReply\x12\x1a\n\x03ret\x18\x01 \x01(\x0e\x32\r.PACoin.ERRNO\"\x1f\n\x10PullPeersRequest\x12\x0b\n\x03num\x18\x01 \x01(\x04\";\n\x0ePullPeersReply\x12\x1a\n\x03ret\x18\x01 \x01(\x0e\x32\r.PACoin.ERRNO\x12\r\n\x05hosts\x18\x02 \x03(\t\"\x1b\n\x0bTransaction\x12\x0c\n\x04\x64\x61ta\x18\x01 \x01(\t\"4\n\x0fSendTxnsRequest\x12!\n\x04txns\x18\x01 \x03(\x0b\x32\x13.PACoin.Transaction\"+\n\rSendTxnsReply\x12\x1a\n\x03ret\x18\x01 \x01(\x0e\x32\r.PACoin.ERRNO\"\x15\n\x05\x42lock\x12\x0c\n\x04\x64\x61ta\x18\x01 \x01(\t\"2\n\x11SendBlocksRequest\x12\x1d\n\x06\x62locks\x18\x01 \x01(\x0b\x32\r.PACoin.Block\"-\n\x0fSendBlocksReply\x12\x1a\n\x03ret\x18\x01 \x01(\x0e\x32\r.PACoin.ERRNO\" \n\x11PullBlocksRequest\x12\x0b\n\x03idx\x18\x01 \x01(\x04\"K\n\x0fPullBlocksReply\x12\x1a\n\x03ret\x18\x01 \x01(\x0e\x32\r.PACoin.ERRNO\x12\x1c\n\x05\x62lock\x18\x02 \x01(\x0b\x32\r.PACoin.Block\"!\n\x11SyncStatusRequest\x12\x0c\n\x04\x63urr\x18\x01 \x01(\x04\";\n\x0fSyncStatusReply\x12\x1a\n\x03ret\x18\x01 \x01(\x0e\x32\r.PACoin.ERRNO\x12\x0c\n\x04\x63urr\x18\x02 \x01(\x04*\x1f\n\x05\x45RRNO\x12\x0b\n\x07SUCCESS\x10\x00\x12\t\n\x05\x45RROR\x10\x01\x32\x81\x01\n\x0cP2PDiscovery\x12\x30\n\x04ping\x12\x13.PACoin.PingRequest\x1a\x11.PACoin.PingReply\"\x00\x12?\n\tpullPeers\x12\x18.PACoin.PullPeersRequest\x1a\x16.PACoin.PullPeersReply\"\x00\x32S\n\x13TransactionTransfer\x12<\n\x08sendTxns\x12\x17.PACoin.SendTxnsRequest\x1a\x15.PACoin.SendTxnsReply\"\x00\x32\xdb\x01\n\rBlockTransfer\x12\x42\n\nsendBlocks\x12\x19.PACoin.SendBlocksRequest\x1a\x17.PACoin.SendBlocksReply\"\x00\x12\x42\n\npullBlocks\x12\x19.PACoin.PullBlocksRequest\x1a\x17.PACoin.PullBlocksReply\"\x00\x12\x42\n\nsyncStatus\x12\x19.PACoin.SyncStatusRequest\x1a\x17.PACoin.SyncStatusReply\"\x00\x62\x06proto3')
 )
 
 _ERRNO = _descriptor.EnumDescriptor(
@@ -40,8 +40,8 @@ _ERRNO = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   serialized_options=None,
-  serialized_start=660,
-  serialized_end=691,
+  serialized_start=645,
+  serialized_end=676,
 )
 _sym_db.RegisterEnumDescriptor(_ERRNO)
 
@@ -376,15 +376,8 @@ _PULLBLOCKSREQUEST = _descriptor.Descriptor(
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='base', full_name='PACoin.PullBlocksRequest.base', index=0,
+      name='idx', full_name='PACoin.PullBlocksRequest.idx', index=0,
       number=1, type=4, cpp_type=4, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='num', full_name='PACoin.PullBlocksRequest.num', index=1,
-      number=2, type=4, cpp_type=4, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -402,7 +395,7 @@ _PULLBLOCKSREQUEST = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=438,
-  serialized_end=484,
+  serialized_end=470,
 )
 
 
@@ -421,9 +414,9 @@ _PULLBLOCKSREPLY = _descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='blocks', full_name='PACoin.PullBlocksReply.blocks', index=1,
-      number=2, type=11, cpp_type=10, label=3,
-      has_default_value=False, default_value=[],
+      name='block', full_name='PACoin.PullBlocksReply.block', index=1,
+      number=2, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
@@ -439,8 +432,8 @@ _PULLBLOCKSREPLY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=486,
-  serialized_end=562,
+  serialized_start=472,
+  serialized_end=547,
 )
 
 
@@ -470,8 +463,8 @@ _SYNCSTATUSREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=564,
-  serialized_end=597,
+  serialized_start=549,
+  serialized_end=582,
 )
 
 
@@ -508,8 +501,8 @@ _SYNCSTATUSREPLY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=599,
-  serialized_end=658,
+  serialized_start=584,
+  serialized_end=643,
 )
 
 _PINGREPLY.fields_by_name['ret'].enum_type = _ERRNO
@@ -519,7 +512,7 @@ _SENDTXNSREPLY.fields_by_name['ret'].enum_type = _ERRNO
 _SENDBLOCKSREQUEST.fields_by_name['blocks'].message_type = _BLOCK
 _SENDBLOCKSREPLY.fields_by_name['ret'].enum_type = _ERRNO
 _PULLBLOCKSREPLY.fields_by_name['ret'].enum_type = _ERRNO
-_PULLBLOCKSREPLY.fields_by_name['blocks'].message_type = _BLOCK
+_PULLBLOCKSREPLY.fields_by_name['block'].message_type = _BLOCK
 _SYNCSTATUSREPLY.fields_by_name['ret'].enum_type = _ERRNO
 DESCRIPTOR.message_types_by_name['PingRequest'] = _PINGREQUEST
 DESCRIPTOR.message_types_by_name['PingReply'] = _PINGREPLY
@@ -644,8 +637,8 @@ _P2PDISCOVERY = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   serialized_options=None,
-  serialized_start=694,
-  serialized_end=823,
+  serialized_start=679,
+  serialized_end=808,
   methods=[
   _descriptor.MethodDescriptor(
     name='ping',
@@ -677,8 +670,8 @@ _TRANSACTIONTRANSFER = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=1,
   serialized_options=None,
-  serialized_start=825,
-  serialized_end=908,
+  serialized_start=810,
+  serialized_end=893,
   methods=[
   _descriptor.MethodDescriptor(
     name='sendTxns',
@@ -701,8 +694,8 @@ _BLOCKTRANSFER = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=2,
   serialized_options=None,
-  serialized_start=911,
-  serialized_end=1130,
+  serialized_start=896,
+  serialized_end=1115,
   methods=[
   _descriptor.MethodDescriptor(
     name='sendBlocks',
