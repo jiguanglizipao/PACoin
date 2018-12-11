@@ -396,7 +396,7 @@ class PACoin:
                 with grpc.insecure_channel(peer) as channel:
                     stub = PACoin_pb2_grpc.BlockTransferStub(channel)
                     stub.sendBlocks(
-                        PACoin_pb2.SendBlocksRequest(block=PACoin_pb2.Block(data=blk))
+                        PACoin_pb2.SendBlocksRequest(block=PACoin_pb2.Block(data=utils.bytes2Data(blk)))
                     )
             except Exception as e:
                 mysqlite.delete_peer(self.db, self.db_mutex, peer)
