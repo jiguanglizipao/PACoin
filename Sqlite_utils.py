@@ -191,14 +191,14 @@ def get_unverified_transactions(db, db_mutex,):
     db_mutex.acquire()
     cursor = db.cursor()
     sql = """
-            SELECT id, data
+            SELECT data
             FROM transactions
             WHERE verified = 0 """
     res = cursor.execute(sql)
     transaction_list = []
     for row in res:
-        pair = (row[0], utils.deserialize(row[1]))
-        transaction_list.append(pair)
+        data = utils.deserialize(row[0])
+        transaction_list.append(data)
     db.commit()
     cursor.close()
     db_mutex.release()
