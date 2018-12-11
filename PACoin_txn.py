@@ -35,6 +35,9 @@ class Txout:
         self.value = value
         self.address = address
 
+    def serialized(self):
+        return pickle.dumps(self, protocol=pickle_protocol)
+
 class Transaction:
 
     # The first txn of a block is mining reward.
@@ -60,6 +63,10 @@ class Transaction:
     def serialized(self):
         return pickle.dumps(self, protocol=pickle_protocol)
 
-    def sign(self, txout_idx, pkey):
+    def sign(self, txout_idx, pkey, txouts):
         assert txout_idx < 2**32 and txout_idx >= 0
-        return crypto.generate_sign(self.serialized() + txout_idx.to_bytes(4, 'big'), pkey)
+        assert isinstance(txouts, list)
+        s = bytes()
+        for txout in txouts:
+            s += txout.serialized()
+        return crypto.generate_sign(self.serialized() + txout_idx.to_bytes(4, 'big') + s, pkey)

@@ -62,7 +62,7 @@ class PACoin:
         # ******* mining logic *******
         self.version = 0
         self.max_transaction_num = 10
-        self.threshold = 18
+        self.threshold = 14
         self.mining_reward = 1
 
         # ****** block transfer logic *****
@@ -199,15 +199,16 @@ class PACoin:
 
         def sendBlocks(self, request, context):
             with self.pacoin.mutable_block_mutex:
-                my_curr = mysqlite.get_total_block_num(
-                    self.pacoin.db, self.pacoin.db_mutex)
+                last_idx, last_hash = mysqlite.get_last_block_idx_hash(self.pacoin.db, self.pacoin.db_mutex)
+                my_curr = last_idx + 1
                 b_bytes = utils.data2Bytes(request.block.data)
                 blk = PACoin_block.Block.unserialize(b_bytes)
                 if blk is None:
                     # FIXME: DDOS
                     print("blk is None.")
                     return PACoin_pb2.SendBlocksReply(ret=PACoin_pb2.ERROR)
-                if blk.index == my_curr:
+
+                if blk.index == my_curr and last_hash == blk.parent_hash:
                     # TODO: Verify block
                     mysqlite.write_block(
                         self.pacoin.db, self.pacoin.db_mutex, my_curr, b_bytes)
@@ -221,20 +222,22 @@ class PACoin:
             return PACoin_pb2.SendBlocksReply(ret=PACoin_pb2.SUCCESS)
 
         def pullBlocks(self, request, context):
-            blk = mysqlite.get_block(
-                self.pacoin.db, self.pacoin.db_mutex, request.idx)
-            if blk is None:
-                return PACoin_pb2.PullBlocksReply(ret=PACoin_pb2.ERROR)
-            blk_data = PACoin_pb2.Block(data=utils.bytes2Data(blk))
+            with self.pacoin.mutable_block_mutex:
+                blk = mysqlite.get_block(
+                    self.pacoin.db, self.pacoin.db_mutex, request.idx)
+                if blk is None:
+                    return PACoin_pb2.PullBlocksReply(ret=PACoin_pb2.ERROR)
+                blk_data = PACoin_pb2.Block(data=utils.bytes2Data(blk))
 
-            return PACoin_pb2.PullBlocksReply(ret=PACoin_pb2.SUCCESS, block=blk_data)
+                return PACoin_pb2.PullBlocksReply(ret=PACoin_pb2.SUCCESS, block=blk_data)
 
         def syncStatus(self, request, context):
-            my_curr = mysqlite.get_total_block_num(self.pacoin.db, self.pacoin.db_mutex)
-            return PACoin_pb2.SyncStatusReply(
-                ret=PACoin_pb2.SUCCESS,
-                curr=my_curr
-            )
+            with self.pacoin.mutable_block_mutex:
+                my_curr = mysqlite.get_total_block_num(self.pacoin.db, self.pacoin.db_mutex)
+                return PACoin_pb2.SyncStatusReply(
+                    ret=PACoin_pb2.SUCCESS,
+                    curr=my_curr
+                )
 
     def send_block(self, blk_bytes):
         print("send_block")
@@ -251,10 +254,21 @@ class PACoin:
                 print(e)
         
 
+    def valblks(self, blks):
+        parent_hash = None
+        for blk in blks:
+            b = PACoin_block.Block.unserialize(blk)
+            if parent_hash is not None:
+                if utils.PACoin_hash(blk) != parent_hash:
+                    return False
+            parent_hash = b.parent_hash
+        return True
+
     def rollback(self, stub):
+        # mysqlite.clear_block_table(self.db, self.db_mutex)
+        # return False
         print("rollback")
         cur_idx = mysqlite.get_total_block_num(self.db, self.db_mutex) - 1
-        old_idx = cur_idx
         last_blk_bytes = mysqlite.get_block(self.db, self.db_mutex, cur_idx)
         last_blk = PACoin_block.Block.unserialize(last_blk_bytes)
         p_hash = last_blk.parent_hash
@@ -280,11 +294,14 @@ class PACoin:
                 blk_list.append(b_bytes)
 
                 if b.parent_hash == p_hash:
-                    mysqlite.erase_block_range(self.db, self.db_mutex, (cur_idx, old_idx + 1))
+                    if not self.valblks(blk_list):
+                        print("Peer not val.")
+                        return False
                     for blk in blk_list:
-                        assert mysqlite.write_block(self.db, self.db_mutex, old_idx, blk)
-                        old_idx -= 1
-                    assert old_idx == cur_idx
+                        b = PACoin_block.Block.unserialize(blk)
+                        mysqlite.erase_block(self.db, self.db_mutex, b.index)
+                        if not mysqlite.write_block(self.db, self.db_mutex, b.index, blk):
+                            print("Cannot write")
                     return True
                 
                 cur_idx -= 1
@@ -299,12 +316,12 @@ class PACoin:
 
     def update_blocks_peer(self, peer, num):
         print("update_blocks_peer, %s, %d" % (peer, num))
-        my_curr = mysqlite.get_total_block_num(self.db, self.db_mutex)
         try:
             with grpc.insecure_channel(peer) as channel:
                 toRollback = True
                 stub = PACoin_pb2_grpc.BlockTransferStub(channel)
                 while num != 0:
+                    my_curr = mysqlite.get_total_block_num(self.db, self.db_mutex)
                     response = stub.pullBlocks(
                         PACoin_pb2.PullBlocksRequest(idx=my_curr),
                         timeout=self.timeout * 1e-3
@@ -330,7 +347,9 @@ class PACoin:
                         print(b.index, my_curr)
                         if toRollback:
                             if self.rollback(stub):
-                                continue
+                                print("rollback success!")
+                                mysqlite.write_block(self.db, self.db_mutex, my_curr, b_bytes)
+                                return True
                         else:
                             print("Warning: Peer is not consistent.")
                         return False

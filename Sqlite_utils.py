@@ -102,6 +102,13 @@ def write_block(db, db_mutex, block_index, block):
 
     return ret
 
+def clear_block_table(db, db_mutex):
+    db_mutex.acquire()
+    cursor = db.cursor()
+    cursor.execute("DELETE FROM blocks")
+    db.commit()
+    cursor.close()
+    db_mutex.release()
 
 def erase_block(db, db_mutex, block_index):
     # TODO: not tested
