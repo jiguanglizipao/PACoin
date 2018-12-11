@@ -103,6 +103,28 @@ def write_block(db, db_mutex, block_index, block):
     return ret
 
 
+def erase_block(db, db_mutex, block_index):
+    # TODO: not tested
+    db_mutex.acquire()
+    cursor = db.cursor()
+    cursor.execute(
+        "DELETE FROM blocks WHERE block_index = ?", (block_index, ))
+    db.commit()
+    cursor.close()
+    db_mutex.release()
+
+
+def erase_block_range(db, db_mutex, block_index_range):
+    # TODO: not tested
+    db_mutex.acquire()
+    cursor = db.cursor()
+    cursor.execute(
+        "DELETE FROM blocks WHERE (block_index >= ? and block_index < ?)", block_index_range)
+    db.commit()
+    cursor.close()
+    db_mutex.release()
+
+
 def get_block(db, db_mutex, block_index):
     db_mutex.acquire()
     cursor = db.cursor()
@@ -176,7 +198,7 @@ def get_last_block_idx_hash(db, db_mutex,):
         "SELECT block_index, block FROM blocks ORDER BY block_index DESC LIMIT 1")
     res = cursor.fetchone()
     if not res:
-        index = 0
+        index = -1
         block_hash = utils.generate_zero(128)
     else:
         index = res[0]
