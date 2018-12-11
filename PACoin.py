@@ -234,6 +234,7 @@ class PACoin:
             )
 
     def rollback(self, stub):
+        print("rollback")
         cur_idx = mysqlite.get_total_block_num(self.db, self.db_mutex) - 1
         old_idx = cur_idx
         last_blk_bytes = mysqlite.get_block(self.db, self.db_mutex, cur_idx)
@@ -275,6 +276,7 @@ class PACoin:
             print(e)
 
     def update_blocks_peer(self, peer, num):
+        print("update_blocks_peer, %s, %d", peer, num)
         my_curr = mysqlite.get_total_block_num(self.db, self.db_mutex)
         try:
             with grpc.insecure_channel(peer) as channel:
@@ -317,6 +319,7 @@ class PACoin:
 
                     num -= 1
                     my_curr += 1
+                    print("Update a block from %s, Remaining %d." %(peer, num))
 
         except Exception as e:
             mysqlite.delete_peer(self.db, self.db_mutex, peer)
@@ -354,6 +357,7 @@ class PACoin:
 
                 if num_max == 0:
                     to_exit = True
+                    print("No need to update blocks.")
                     break
 
                 cands = [can for can in candidates if can[1] == num_max]
@@ -364,7 +368,7 @@ class PACoin:
         with self.to_send_blocks_mutex:
             if len(self.to_send_blocks) == 0:
                 return
-
+            print("Bcast, #Blk %d", len(self.to_send_blocks))
             blk = self.to_send_blocks.pop(0)
 
         peers = mysqlite.list_peers(self.db, self.db_mutex, self.peer_num)
