@@ -152,14 +152,16 @@ class PACoin:
             for i in range(0, retry):
                 n = int(random.random() * pow(2, 64))
                 self.block_on_trying.set_nonce(n)
-                h = utils.PACoin_hash(self.block_on_trying.serialized())
+                blk_bytes = self.block_on_trying.serialized()
+                h = utils.PACoin_hash(blk_bytes)
                 if utils.validate_hash(h, self.threshold):
                     mysqlite.write_block(
-                        self.db, self.db_mutex, self.block_on_trying.index, self.block_on_trying.serialized())
+                        self.db, self.db_mutex, self.block_on_trying.index, blk_bytes)
                     print("{\n    " + "\n    ".join("{}: {}".format(k, v)
                                                     for k, v in self.block_on_trying.__dict__.items()) + "\n}")
                     print("success", h)
                     # success!
+                    self.send_block(blk_bytes)
 
                     return True
             return False
@@ -232,6 +234,20 @@ class PACoin:
                 ret=PACoin_pb2.SUCCESS,
                 curr=my_curr
             )
+
+    def send_block(self, blk_bytes):
+        print("send_block")
+        for peer in mysqlite.list_peers(self.db, self.db_mutex, self.peer_num):
+            try:
+                with grpc.insecure_channel(peer) as channel:
+                    stub = PACoin_pb2_grpc.BlockTransferStub(channel)
+                    stub.sendBlocks(
+                        PACoin_pb2.PullBlocksRequest(block=utils.bytes2Data(blk_bytes)),
+                        timeout=self.timeout * 1e-3
+                    )
+            except Exception as e:
+                print(e)
+        
 
     def rollback(self, stub):
         print("rollback")
