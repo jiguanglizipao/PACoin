@@ -25,7 +25,7 @@ if __name__ == '__main__':
     lg.setLogLevel('info')
 
     global popens, net
-    net = TreeNet(depth=3, fanout=4, switch=OVSSwitch)
+    net = TreeNet(depth=1, fanout=4, switch=OVSSwitch)
     net.start()
 
     popens = {}
