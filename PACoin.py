@@ -321,6 +321,8 @@ class PACoin:
                     b = PACoin_block.Block.unserialize(b_bytes)
                     # TODO: Verify block
                     if b.parent_hash != p_hash or b.index != my_curr:
+                        print(b.parent_hash, p_hash)
+                        print(b.index, my_curr)
                         if toRollback:
                             self.rollback(stub)
                         else:
@@ -385,7 +387,7 @@ class PACoin:
         with self.to_send_blocks_mutex:
             if len(self.to_send_blocks) == 0:
                 return
-            print("Bcast, #Blk %d", len(self.to_send_blocks))
+            print("Bcast, #Blk %d" % len(self.to_send_blocks))
             blk = self.to_send_blocks.pop(0)
 
         peers = mysqlite.list_peers(self.db, self.db_mutex, self.peer_num)
@@ -394,7 +396,7 @@ class PACoin:
                 with grpc.insecure_channel(peer) as channel:
                     stub = PACoin_pb2_grpc.BlockTransferStub(channel)
                     stub.sendBlocks(
-                        PACoin_pb2.SendBlocksRequest(block=blk)
+                        PACoin_pb2.SendBlocksRequest(block=PACoin_pb2.Block(block=blk))
                     )
             except Exception as e:
                 mysqlite.delete_peer(self.db, self.db_mutex, peer)
