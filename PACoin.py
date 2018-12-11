@@ -293,7 +293,7 @@ class PACoin:
             print(e)
 
     def update_blocks_peer(self, peer, num):
-        print("update_blocks_peer, %s, %d", peer, num)
+        print("update_blocks_peer, %s, %d" % (peer, num))
         my_curr = mysqlite.get_total_block_num(self.db, self.db_mutex)
         try:
             with grpc.insecure_channel(peer) as channel:
@@ -425,7 +425,7 @@ class PACoin:
         signal.signal(signal.SIGINT, self.KeyboardInterruptHandler)
         self.serve()
         self.loop(1, self.update_blocks)
-        self.loop(1, self.mine)
+        self.loop(0.1, self.mine)
         self.loop(1, self.send_block_thread)
         while not self.to_exit:
             time.sleep(1)
