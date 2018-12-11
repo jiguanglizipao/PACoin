@@ -241,8 +241,9 @@ class PACoin:
             try:
                 with grpc.insecure_channel(peer) as channel:
                     stub = PACoin_pb2_grpc.BlockTransferStub(channel)
+                    blk_data = PACoin_pb2.Block(data=utils.bytes2Data(blk_bytes))
                     stub.sendBlocks(
-                        PACoin_pb2.PullBlocksRequest(block=utils.bytes2Data(blk_bytes)),
+                        PACoin_pb2.SendBlocksRequest(block=blk_data),
                         timeout=self.timeout * 1e-3
                     )
             except Exception as e:
@@ -425,7 +426,7 @@ class PACoin:
         self.serve()
         self.loop(1, self.update_blocks)
         self.loop(1, self.mine)
-        # self.loop(10, self.send_block_thread)
+        self.loop(1, self.send_block_thread)
         while not self.to_exit:
             time.sleep(1)
 
