@@ -62,7 +62,7 @@ class PACoin:
         # ******* mining logic *******
         self.version = 0
         self.max_transaction_num = 10
-        self.threshold = 14
+        self.threshold = 18
         self.mining_reward = 1
 
         # ****** block transfer logic *****
@@ -211,6 +211,7 @@ class PACoin:
                     # TODO: Verify block
                     mysqlite.write_block(
                         self.pacoin.db, self.pacoin.db_mutex, my_curr, b_bytes)
+                    print("Recv blk %d" % my_curr)
                     with self.pacoin.to_send_blocks_mutex:
                         self.pacoin.to_send_blocks.append(b_bytes)
                 else:
