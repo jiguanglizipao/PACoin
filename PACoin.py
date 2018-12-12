@@ -14,7 +14,8 @@ import grpc
 import PACoin_pb2
 import PACoin_pb2_grpc
 import PACoin_block
-import PACrypto
+import PACoin_txn
+import PACrypto as crypto
 import pickle
 import Sqlite_utils as mysqlite
 import PACoin_utils as utils
@@ -54,16 +55,22 @@ class PACoin:
         self.db_mutex = threading.Lock()
         self.timeout = timeout
         self.peer_num = peer_num
-        self.pkey = PACrypto.generate_private_key()
-        self.pubkey = PACrypto.generate_public_key(self.pkey)
-        self.address = PACrypto.generate_address(self.pubkey)
+        self.pkey = crypto.generate_private_key()
+        self.pubkey = crypto.generate_public_key(self.pkey)
+        self.address = crypto.generate_address(self.pubkey)
         atexit.register(self.cleanup)
 
         # ******* mining logic *******
         self.version = 0
         self.max_transaction_num = 10
         self.threshold = 14
-        self.mining_reward = 1
+        self.mining_reward = 100
+
+        # ******* test transaction logic *******
+        self.collect_pkey = crypto.generate_private_key()
+        self.collect_pubkey = crypto.generate_public_key(self.collect_pkey)
+        self.collect_address = crypto.generate_address(self.collect_pubkey)
+        self.mining_success_num = 0
 
         # ****** block transfer logic *****
         self.mutable_block_mutex = threading.Lock()
@@ -129,16 +136,18 @@ class PACoin:
 # *********************** mining logic *************************
 
     def update_block_header(self):
-        note = "should be atomic......"
         unverified_transaction_list = mysqlite.get_unverified_transactions(
             self.db, self.db_mutex)
-        unverified_transaction_list.sort(key=lambda t: -(t[1].transaction.tip))
+        unverified_transaction_list.sort(key=lambda t: -(t.tips))
         unverified_transaction_list = unverified_transaction_list[:self.max_transaction_num]
         # transaction_list.sort(key=lambda t: t[1].transaction.timestamp)
         transaction_list = []
         for txn in unverified_transaction_list:
-            if utils.validate_transaction(self.db, self.db_mutex, txn):
+            valid = utils.validate_transaction(self.db, self.db_mutex, txn)
+            if valid:
                 transaction_list.append(txn)
+            else:
+                print("unvalid!  " + utils.PACoin_hash(txn))
         index, last_block_hash = mysqlite.get_last_block_idx_hash(
             self.db, self.db_mutex)
         self.block_on_trying = PACoin_block.Block(
@@ -155,36 +164,40 @@ class PACoin:
                 blk_bytes = self.block_on_trying.serialized()
                 h = utils.PACoin_hash(blk_bytes)
                 if utils.validate_hash(h, self.threshold):
+                    self.block_on_trying.set_timestamp(int(time.time()))
                     mysqlite.write_block(
                         self.db, self.db_mutex, self.block_on_trying.index, blk_bytes)
                     print("{\n    " + "\n    ".join("{}: {}".format(k, v)
                                                     for k, v in self.block_on_trying.__dict__.items()) + "\n}")
                     print("success", h)
+                    self.mining_success_num += 1
                     # success!
                     self.send_block(blk_bytes)
+                    mysqlite.update_verified_transaction(self.db, self.db_mutex, self.block_on_trying.transaction_list,
+                                                         [1]*len(self.block_on_trying.transaction_list))
+
+                    # transfer reward to collect account
+                    pre_t = self.block_on_trying.transaction_list[0]
+                    pre_t_hash = utils.PACoin_hash(pre_t)
+                    sign = pre_t.sign(0, self.pkey)
+                    txin =  PACoin_txn.Txin(pre_t_hash, 0, self.pubkey, sign)
+                    tips = 1
+                    assert self.mining_reward > tips
+                    txout_tips = PACoin_txn.Txout(tips, utils.generate_zero(88))
+                    txout = PACoin_txn.Txout(self.mining_reward-tips, self.collect_address)
+                    txn = PACoin_txn.Transaction([txin], [txout_tips, txout], int(time.time()), tips)
+                    mysqlite.write_transaction(self.db, self.db_mutex, 0, txn)
+
+                    self.pkey = crypto.generate_private_key()
+                    self.pubkey = crypto.generate_public_key(self.pkey)
+                    self.address = crypto.generate_address(self.pubkey)
 
                     return True
             return False
 
-    def test_db(self):
-        # for i in range(6):
-        #     t = utils.generate_random_transaction()
-        #     mysqlite.write_transaction(self.db, self.db_mutex, 1, t)
-        # for i in range(4):
-        #     t = utils.generate_random_transaction()
-        #     mysqlite.write_transaction(self.db, self.db_mutex, 0, t)
-        #
-        # transaction_list = mysqlite.get_unverified_transactions(self.db, self.db_mutex)
-        # transaction_list.sort(key=lambda t: -(t[1].transaction.tip))
-        # transaction_list = transaction_list[:self.max_transaction_num]
-        # transaction_list.sort(key=lambda t: t[1].transaction.timestamp)
-        # flag_list = []
-        # id_list = []
-        # for t in transaction_list:
-        #     flag_list.append(1)
-        #     id_list.append(t[0])
-        # mysqlite.update_transaction(self.db, self.db_mutex, id_list,
-        # flag_list)
+    def test_txn(self):
+
+
         pass
 
 
@@ -478,3 +491,5 @@ if __name__ == '__main__':
         server=grpc.server(concurrent.futures.ThreadPoolExecutor(max_workers=4)), bind=args.bind, port=args.port,
         peers=args.peer, db=sqlite3.connect(args.db, check_same_thread=False), timeout=args.timeout, peer_num=args.peer_num)
     pacoin.start()
+
+
