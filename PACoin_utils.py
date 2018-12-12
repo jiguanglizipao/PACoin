@@ -59,7 +59,10 @@ def validate_single_txin(txin, pre_t):
     addr = crypto.generate_address(txin.pre_txout_pubkey)
     if addr != pre_t.txouts[txin.pre_txout_idx].address:
         return False
-    sign_data = pre_t.serialized() + txin.pre_txout_idx.to_bytes(4, 'big')
+    s = bytes()
+    for txout in pre_t.txouts:
+        s += txout.serialized()
+    sign_data = pre_t.serialized() + txin.pre_txout_idx.to_bytes(4, 'big') + s
     if not crypto.verify_sign(sign_data, txin.pre_txout_sign, txin.pre_txout_pubkey):
         return False
 
@@ -87,6 +90,30 @@ def validate_transaction(db, db_mutex, transaction):
         return False
     return True
 
+
+def find_signs_in_block_chain(db, db_mutex, signs):
+    block_num = mysqlite.get_total_block_num(db, db_mutex)
+    for i in range(block_num):
+        block = mysqlite.get_block(db, db_mutex, block_num-i)
+        if isinstance(block, bytes):
+            block = deserialize(block)
+        for txn in block.transaction_list:
+            for txin in txn.txins:
+                if txin.pre_txout_sign in signs:
+                    return True
+    block_num_new = mysqlite.get_total_block_num(db, db_mutex)
+    while block_num_new > block_num:
+        for i in range(block_num+1, block_num_new+1):
+            block = mysqlite.get_block(db, db_mutex, i)
+            if isinstance(block, bytes):
+                block = deserialize(block)
+            for txn in block.transaction_list:
+                for txin in txn.txins:
+                    if txin.pre_txout_sign in signs:
+                        return True
+        block_num = block_num_new
+        block_num_new = mysqlite.get_total_block_num(db, db_mutex)
+    return False
 
 # ==== Block ====
 # self.version = version
@@ -135,10 +162,16 @@ def validate_block(db, db_mutex, block, version, reward, threshold):
                 return False
             if block.myaddr != reward_txn.txouts[0].address:
                 return False
+    signs = [] # do not allow the same sign
     for transaction in transaction_list:
         if not validate_transaction(db, db_mutex, transaction):
             return False
-
+        for txin in transaction.txins:
+            if txin.pre_txout_sign in signs:
+                return False
+            signs.append(txin.pre_txout_sign)
+    if find_signs_in_block_chain(db, db_mutex, signs):
+        return False
     return True
 
 
