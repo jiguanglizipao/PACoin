@@ -58,13 +58,16 @@ def generate_zero(num):
 def validate_single_txin(txin, pre_t):
     addr = crypto.generate_address(txin.pre_txout_pubkey)
     if addr != pre_t.txouts[txin.pre_txout_idx].address:
+        print("ERROR: address matching failed")
         return False
     s = bytes()
     for txout in pre_t.txouts:
         s += txout.serialized()
     sign_data = pre_t.serialized() + txin.pre_txout_idx.to_bytes(4, 'big') + s
     if not crypto.verify_sign(sign_data, txin.pre_txout_sign, txin.pre_txout_pubkey):
+        print("ERROR: sign validation failed")
         return False
+    return True
 
 
 def validate_transaction(db, db_mutex, transaction):
@@ -77,16 +80,21 @@ def validate_transaction(db, db_mutex, transaction):
         h = txin.pre_txn_hash
         pre_t = mysqlite.get_transaction(db, db_mutex, h)
         if not pre_t:
+            print("ERROR: pre txn not found")
             return False
         if not validate_single_txin(txin, pre_t):
             return False
         balance += pre_t.txouts[txin.pre_txout_idx].value
-    if transaction.txouts[0].address != generate_zero(96):
+    if transaction.txouts[0].address != generate_zero(88):
+        print(transaction.txouts[0].address)
+        print("ERROR: not pay for tips")
         return False
     if transaction.txouts[0].value != transaction.tips:
+        print("ERROR: invalid tips value")
         return False
     consume = sum([txout.value for txout in transaction.txouts])
     if balance != consume:
+        print("ERROR: in-out ")
         return False
     return True
 
@@ -181,3 +189,5 @@ def bytes2Data(bs):
 
 def data2Bytes(data: str):
     return base64.b64decode(data.encode("utf-8"))
+
+

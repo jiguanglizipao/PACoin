@@ -29,7 +29,7 @@ class Txin:
 class Txout:
 
     def __init__(self, value, address):
-        # address is in base64(96)
+        # address is in base64(88)
         assert isinstance(value, int) and value >= 0
         assert isinstance(address, str) and len(address) == 88
         self.value = value
@@ -63,10 +63,10 @@ class Transaction:
     def serialized(self):
         return pickle.dumps(self, protocol=pickle_protocol)
 
-    def sign(self, txout_idx, pkey, txouts):
+    def sign(self, txout_idx, pkey):
         assert txout_idx < 2**32 and txout_idx >= 0
-        assert isinstance(txouts, list)
+        assert isinstance(self.txouts, list)
         s = bytes()
-        for txout in txouts:
+        for txout in self.txouts:
             s += txout.serialized()
         return crypto.generate_sign(self.serialized() + txout_idx.to_bytes(4, 'big') + s, pkey)

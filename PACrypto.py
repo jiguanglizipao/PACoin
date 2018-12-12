@@ -50,7 +50,7 @@ def generate_sign(data, pkey_hex):
         int(pkey_hex, base=16), cryptography.hazmat.primitives.asymmetric.ec.SECP256K1(), cryptography.hazmat.backends.default_backend())
     sign = pkey.sign(data, cryptography.hazmat.primitives.asymmetric.ec.ECDSA(
         cryptography.hazmat.primitives.hashes.SHA512()))
-    return base64.b64encode(sign)
+    return base64.b64encode(sign).decode("utf-8")
 
 
 def verify_sign(data, sign, pubkey_hex):
@@ -96,3 +96,6 @@ def generate_hash(data):
 # sign = generate_sign(data, pkey)
 # print(verify_sign(data, sign, pubkey))
 # print(verify_sign("12312312", sign, pubkey))
+
+
+

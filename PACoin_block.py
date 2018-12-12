@@ -109,6 +109,9 @@ class Block:
     def set_nonce(self, pow_n):
         self.nonce = pow_n
 
+    def set_timestamp(self, timestamp):
+        self.timestamp = timestamp
+
     def serialized(self):
         return pickle.dumps(self, protocol=pickle_protocol)
 

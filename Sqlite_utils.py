@@ -66,7 +66,7 @@ def write_transaction(db, db_mutex, verified, transaction):
     data = transaction.serialized()
     hash = utils.PACoin_hash(data)
     cursor.execute(
-        "INSERT INTO transactions (hash, verified, data) VALUES (?, ?)", (hash, verified, data, ))
+        "INSERT INTO transactions (hash, verified, data) VALUES (?, ?, ?)", (hash, verified, data, ))
     db.commit()
     cursor.close()
     db_mutex.release()
@@ -79,7 +79,14 @@ def update_verified_transaction(db, db_mutex, transaction_list, flag_list):
     for (t, f) in zip(transaction_list, flag_list):
         h = utils.PACoin_hash(t)
         cursor.execute(
-            "UPDATE transactions SET verified = %d WHERE hash = %s" % (f, h))
+            "SELECT data FROM transactions WHERE hash='%s'" % h)
+        res = cursor.fetchone()
+        if not res:
+            cursor.execute(
+                "INSERT INTO transactions (hash, verified, data) VALUES (?, ?, ?)", (h, f, t.serialized(),))
+        else:
+            cursor.execute(
+                "UPDATE transactions SET verified = %d WHERE hash = '%s'" % (f, h))
     db.commit()
     cursor.close()
     db_mutex.release()
@@ -183,18 +190,18 @@ def get_total_block_num(db, db_mutex):
     return num
 
     
-def get_transaction(db, db_mutex, hash):
+def get_transaction(db, db_mutex, h):
     db_mutex.acquire()
     cursor = db.cursor()
     cursor.execute(
-        "SELECT data FROM transactions WHERE hash=%s" % hash)
+        "SELECT data FROM transactions WHERE hash='%s'" % h)
     res = cursor.fetchone()
     db.commit()
     cursor.close()
     db_mutex.release()
     if not res:
         return None
-    return utils.deserialize(res)
+    return utils.deserialize(res[0])
 
 
 def get_last_block_idx_hash(db, db_mutex,):
@@ -232,4 +239,26 @@ def get_unverified_transactions(db, db_mutex,):
     cursor.close()
     db_mutex.release()
     return transaction_list
+
+
+# used for transaction test
+def write_account(db, db_mutex, addr, pubkey, prikey, balance):
+    db_mutex.acquire()
+    cursor = db.cursor()
+    cursor.execute(
+        "INSERT INTO accounts (addr, pubkey, prikey, banlance, spent) VALUES (?, ?, ?, ?, ?)", (addr, pubkey, prikey, balance, 0, ))
+    db.commit()
+    cursor.close()
+    db_mutex.release()
+
+
+def get_unspent_account(db, db_mutex, addr, spent):
+    db_mutex.acquire()
+    cursor = db.cursor()
+    cursor.execute(
+        "UPDATE accounts SET spent = %d WHERE addr = %s" % (spent, addr))
+    db.commit()
+    cursor.close()
+    db_mutex.release()
+
 
