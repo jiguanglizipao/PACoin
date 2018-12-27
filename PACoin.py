@@ -318,6 +318,7 @@ class PACoin:
         # return False
         print("rollback")
         cur_idx = mysqlite.get_total_block_num(self.db, self.db_mutex) - 1
+        fork_idx = cur_idx
         last_blk_bytes = mysqlite.get_block(self.db, self.db_mutex, cur_idx)
         last_blk = PACoin_block.Block.unserialize(last_blk_bytes)
         p_hash = last_blk.parent_hash
@@ -346,6 +347,7 @@ class PACoin:
                     if not self.valblks(blk_list):
                         print("Peer not val.")
                         return False
+                    print("fork,{},{},{}".format(fork_idx, p_hash, utils.PACoin_hash(b_bytes)))
                     for blk in blk_list:
                         b = PACoin_block.Block.unserialize(blk)
                         mysqlite.erase_block(self.db, self.db_mutex, b.index)

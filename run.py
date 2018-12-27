@@ -12,7 +12,7 @@ from mininet.clean import cleanup
 from mininet.util import pmonitor
 
 
-BW = 1  #Mbps
+BW = 10  #Mbps
 DELAY = '10ms'
 LOSS = 2  #percents
 
@@ -28,13 +28,13 @@ class CircleTopo( Topo ):
 
         lastSwitch = None
         firstSwitch = None
-        for i in irange( 1, k ):
+        for i in range( 1, k+1 ):
             # Add switch
             switch = self.addSwitch( 's%s' % i )
             if not firstSwitch:
                 firstSwitch = switch
             # Add hosts to switch
-            for j in irange( 1, n ):
+            for j in range( 1, n+1 ):
                 host = self.addHost( genHostName( i, j ) )
                 self.addLink( host, switch, bw=BW, delay=DELAY, loss=LOSS, use_htb=True )
             # Connect switch to previous
@@ -45,7 +45,7 @@ class CircleTopo( Topo ):
         if k > 1:
             self.addLink( lastSwitch, firstSwitch, bw=BW, delay=DELAY, loss=LOSS, use_htb=True )
 
-class LinearNet( Topo ):
+class LinearTopo( Topo ):
     def build( self, k=2, n=1, **_opts):
         self.k = k
         self.n = n
@@ -56,11 +56,11 @@ class LinearNet( Topo ):
             genHostName = lambda i, j: 'h%ss%d' % ( j, i )
 
         lastSwitch = None
-        for i in irange( 1, k ):
+        for i in range( 1, k+1 ):
             # Add switch
             switch = self.addSwitch( 's%s' % i )
             # Add hosts to switch
-            for j in irange( 1, n ):
+            for j in range( 1, n+1 ):
                 host = self.addHost( genHostName( i, j ) )
                 self.addLink( host, switch, bw=BW, delay=DELAY, loss=LOSS, use_htb=True )
             # Connect switch to previous
@@ -158,8 +158,8 @@ if __name__ == '__main__':
     global popens, net
 #    net = LinearNet(k=16, n=1, switch=OVSSwitch, link=TCLink)
 #    net = CircleNet(k=16, n=1, switch=OVSSwitch, link=TCLink)
-    net = TreeNet(depth=2, fanout=4, switch=OVSSwitch, link=TCLink)
-#    net = StarNet(k=16, n=1, switch=OVSSwitch, link=TCLink)
+#    net = TreeNet(depth=2, fanout=4, switch=OVSSwitch, link=TCLink)
+    net = StarNet(k=16, n=1, switch=OVSSwitch, link=TCLink)
 #    net = TorusNet(x=4, y=4, n=1, switch=OVSSwitch, link=TCLink)
     net.start()
 
