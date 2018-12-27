@@ -195,10 +195,46 @@ class PACoin:
                     return True
             return False
 
-    def test_txn(self):
+    def PoR_mine(self):
+        with self.mutable_block_mutex:
+            retry = 10
+            self.update_block_header()
+            blk_bytes = self.block_on_trying.serialized()
+            porthreshold = 1.0 / (2 ** self.threshold)
+            for i in range(0, retry):
+                time.sleep(1)
+                r = random.random()
+                if r < porthreshold:
+                    self.block_on_trying.set_timestamp(int(time.time()))
+                    mysqlite.write_block(
+                        self.db, self.db_mutex, self.block_on_trying.index, blk_bytes)
+                    print("{\n    " + "\n    ".join("{}: {}".format(k, v)
+                                                    for k, v in self.block_on_trying.__dict__.items()) + "\n}")
+                    print("success")
+                    self.mining_success_num += 1
+                    # success!
+                    self.send_block(blk_bytes)
+                    mysqlite.update_verified_transaction(self.db, self.db_mutex, self.block_on_trying.transaction_list,
+                                                         [1]*len(self.block_on_trying.transaction_list))
 
+                    # transfer reward to collect account
+                    pre_t = self.block_on_trying.transaction_list[0]
+                    pre_t_hash = utils.PACoin_hash(pre_t)
+                    sign = pre_t.sign(0, self.pkey)
+                    txin =  PACoin_txn.Txin(pre_t_hash, 0, self.pubkey, sign)
+                    tips = 1
+                    assert self.mining_reward > tips
+                    txout_tips = PACoin_txn.Txout(tips, utils.generate_zero(88))
+                    txout = PACoin_txn.Txout(self.mining_reward-tips, self.collect_address)
+                    txn = PACoin_txn.Transaction([txin], [txout_tips, txout], int(time.time()), tips)
+                    mysqlite.write_transaction(self.db, self.db_mutex, 0, txn)
 
-        pass
+                    self.pkey = crypto.generate_private_key()
+                    self.pubkey = crypto.generate_public_key(self.pkey)
+                    self.address = crypto.generate_address(self.pubkey)
+
+                    return True
+            return False
 
 
 # *********************** end of mining logic *************************

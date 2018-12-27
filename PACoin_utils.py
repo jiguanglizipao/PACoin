@@ -183,6 +183,45 @@ def validate_block(db, db_mutex, block, version, reward, threshold):
     return True
 
 
+def PoR_validate_block(db, db_mutex, block, version, reward, threshold):
+    # TODO: not tested
+    # validate basic information
+    if block.version != version:
+        return False
+    (index, pre_hash) = mysqlite.get_last_block_idx_hash(db, db_mutex)
+    if block.parent_hash != pre_hash:
+        return False
+    if block.index != index + 1:
+        return False
+
+    # validate transactions
+    merkle_tree = PACoin_block.MerkelTree(block.transaction_list)
+    if merkle_tree.root.value != block.merkle_root.value:
+        return False
+    transaction_list = block.transaction_list
+    if len(transaction_list[0].txins) == 1 and  len(transaction_list[0].txouts) == 1:
+        if transaction_list[0].txins[0].pre_txn_hash == generate_zero(128):
+            # mining reward
+            reward_txn = transaction_list[0]
+            transaction_list = transaction_list[1:]
+            fee = reward + sum([txn.tips for txn in transaction_list])
+            if fee != reward_txn.txouts[0].value:
+                return False
+            if block.myaddr != reward_txn.txouts[0].address:
+                return False
+    signs = [] # do not allow the same sign
+    for transaction in transaction_list:
+        if not validate_transaction(db, db_mutex, transaction):
+            return False
+        for txin in transaction.txins:
+            if txin.pre_txout_sign in signs:
+                return False
+            signs.append(txin.pre_txout_sign)
+    if find_signs_in_block_chain(db, db_mutex, signs):
+        return False
+    return True
+
+
 def bytes2Data(bs):
     return base64.b64encode(bs).decode("utf-8")
 
